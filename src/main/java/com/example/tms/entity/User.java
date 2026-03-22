@@ -1,14 +1,14 @@
 package com.example.tms.entity;
 
 import jakarta.persistence.*;
+import com.example.tms.entity.enums.UserStatus;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 @Getter
@@ -32,18 +32,18 @@ public class User {
     @Column(nullable = true)
     private String password;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
+    private UserStatus status = UserStatus.PENDING_VERIFICATION;
+
+    @Column(name = "default_salary_rate", nullable = false, precision = 5, scale = 4)
+    private java.math.BigDecimal defaultSalaryRate = new java.math.BigDecimal("0.7500");
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private Set<Role> roles = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<UserProvider> providers = new HashSet<>();
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 }

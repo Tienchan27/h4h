@@ -1,5 +1,6 @@
 package com.example.tms.entity;
 
+import com.example.tms.entity.enums.InvoiceStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -44,8 +45,9 @@ public class Invoice {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String status;
+    private InvoiceStatus status = InvoiceStatus.UNPAID;
 
     @Column(name = "due_date", nullable = false)
     private LocalDate dueDate;
@@ -54,6 +56,6 @@ public class Invoice {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @OneToOne(mappedBy = "invoice", cascade = CascadeType.ALL)
-    private Payment payment;
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.Set<Payment> payments = new java.util.HashSet<>();
 }

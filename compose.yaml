@@ -4,14 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8080"
     depends_on:
       postgres-db:
         condition: service_healthy
     environment:
-      spring.datasource.url: jdbc:postgresql://postgres-db:5432/tms_db
-      spring.datasource.username: tms_user
-      spring.datasource.password: tms_password
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-db:5432/tms_db
+      SPRING_DATASOURCE_USERNAME: tms_user
+      SPRING_DATASOURCE_PASSWORD: tms_password
     networks:
       - tms-network
   postgres-db:
@@ -25,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - tms-network
     healthcheck:

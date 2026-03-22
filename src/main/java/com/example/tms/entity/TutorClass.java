@@ -1,5 +1,6 @@
 package com.example.tms.entity;
 
+import com.example.tms.entity.enums.ClassStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -35,8 +36,12 @@ public class TutorClass {
     @Column(name = "price_per_hour", nullable = false, precision = 10, scale = 2)
     private BigDecimal pricePerHour;
 
+    @Column(name = "default_salary_rate", nullable = false, precision = 5, scale = 4)
+    private BigDecimal defaultSalaryRate = new BigDecimal("0.7500");
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String status;
+    private ClassStatus status = ClassStatus.ACTIVE;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

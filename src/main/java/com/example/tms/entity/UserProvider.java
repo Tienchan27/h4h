@@ -1,5 +1,6 @@
 package com.example.tms.entity;
 
+import com.example.tms.entity.enums.ProviderType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,8 +30,9 @@ public class UserProvider {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String provider;
+    private ProviderType provider;
 
     @Column(name = "provider_id", nullable = false)
     private String providerId;

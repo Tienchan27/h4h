@@ -4,11 +4,13 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.util.UUID;
 
 @Getter
@@ -33,11 +35,38 @@ public class Session {
     @Column(name = "duration_hours", nullable = false, precision = 5, scale = 2)
     private BigDecimal durationHours;
 
+    @Column(name = "tuition_at_log", nullable = false, precision = 10, scale = 2)
+    private BigDecimal tuitionAtLog;
+
+    @Column(name = "salary_rate_at_log", nullable = false, precision = 5, scale = 4)
+    private BigDecimal salaryRateAtLog;
+
+    @Column(name = "payroll_month", nullable = false, length = 7)
+    private String payrollMonth;
+
+    @Column(name = "note", length = 1000)
+    private String note;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "updated_by")
+    private User updatedBy;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    public void setDefaultPayrollMonth() {
+        if (this.payrollMonth == null || this.payrollMonth.isBlank()) {
+            this.payrollMonth = YearMonth.now().toString();
+        }
+    }
 }

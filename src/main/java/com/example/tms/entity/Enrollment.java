@@ -1,5 +1,6 @@
 package com.example.tms.entity;
 
+import com.example.tms.entity.enums.EnrollmentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,6 +40,7 @@ public class Enrollment {
     @Column(name = "left_at")
     private LocalDateTime leftAt;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private String status;
+    private EnrollmentStatus status = EnrollmentStatus.ACTIVE;
 }
