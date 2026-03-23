@@ -5,9 +5,16 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || '/api',
 });
 
+function isAuthEndpoint(url) {
+  if (!url) {
+    return false;
+  }
+  return /^\/?auth(\/|$)/.test(url);
+}
+
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
-  if (token) {
+  if (token && !isAuthEndpoint(config.url || '')) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

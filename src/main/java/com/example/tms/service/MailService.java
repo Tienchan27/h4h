@@ -1,5 +1,6 @@
 package com.example.tms.service;
 
+import com.example.tms.exception.ApiException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
@@ -23,7 +24,8 @@ public class MailService {
             message.setText("Your OTP code is: " + otp + ". It expires in 5 minutes.");
             mailSender.send(message);
         } catch (Exception ex) {
-            log.warn("OTP email sending failed for {}: {}", to, ex.getMessage());
+            log.error("OTP email sending failed for {}: {}", to, ex.getMessage(), ex);
+            throw new ApiException("Failed to deliver OTP email. Please try again later.");
         }
     }
 }

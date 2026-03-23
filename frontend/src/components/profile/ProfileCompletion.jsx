@@ -6,6 +6,17 @@ import api from '../../services/api';
 import { markProfileCompleted } from '../../utils/storage';
 import { normalizeProfilePayload, requirePhoneOrFacebook } from '../../utils/validation';
 
+function extractApiErrorMessage(error) {
+  const details = error?.response?.data?.details;
+  if (details && typeof details === 'object') {
+    const firstDetail = Object.values(details).find((value) => typeof value === 'string' && value.trim());
+    if (firstDetail) {
+      return firstDetail;
+    }
+  }
+  return error?.response?.data?.message || 'Cap nhat ho so that bai';
+}
+
 function ProfileCompletion({ user, onCompleted, onError }) {
   const [form, setForm] = useState({
     phoneNumber: '',
@@ -32,7 +43,7 @@ function ProfileCompletion({ user, onCompleted, onError }) {
       markProfileCompleted();
       onCompleted?.();
     } catch (error) {
-      onError?.(error?.response?.data?.message || 'Cap nhat ho so that bai');
+      onError?.(extractApiErrorMessage(error));
     } finally {
       setLoading(false);
     }

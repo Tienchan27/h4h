@@ -2,7 +2,6 @@ package com.example.tms.security;
 
 import com.example.tms.entity.UserRole;
 import com.example.tms.entity.enums.UserRoleStatus;
-import com.example.tms.exception.ApiException;
 import com.example.tms.repository.UserRoleRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -68,9 +67,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // Set authentication in SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        } catch (ApiException ex) {
+        } catch (RuntimeException ex) {
             // Token validation failed - let request continue without authentication
             // SecurityConfig will reject if endpoint requires authentication
+            SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);

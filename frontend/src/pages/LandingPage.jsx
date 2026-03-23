@@ -7,7 +7,7 @@ import RegisterForm from '../components/auth/RegisterForm';
 import OTPVerification from '../components/auth/OTPVerification';
 import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 import { getAuthUser } from '../utils/storage';
-import { googleLogin, linkGoogleAccount } from '../services/googleAuth';
+import { googleLogin } from '../services/googleAuth';
 
 function LandingPage() {
   const [tab, setTab] = useState('login');
@@ -32,11 +32,7 @@ function LandingPage() {
     } catch (err) {
       const message = err?.response?.data?.message || 'Google login failed';
       if (message === 'EMAIL_CONFLICT') {
-        const currentPassword = window.prompt('Email da ton tai. Nhap mat khau hien tai de link Google:');
-        if (!currentPassword) return;
-        await linkGoogleAccount(idToken, currentPassword);
-        await googleLogin(idToken);
-        routeByProfileFlag();
+        setError('Email da ton tai voi mat khau. Vui long dang nhap bang mat khau truoc, sau do vao tai khoan de lien ket Google.');
         return;
       }
       setError(message);

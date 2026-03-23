@@ -43,6 +43,11 @@ public class GlobalExceptionHandler {
                 .body(error("NOT_FOUND", "No handler for request '" + ex.getResourcePath() + "'"));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<?> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(error("BAD_REQUEST", ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleUnhandled(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -12,6 +12,7 @@ import java.util.UUID;
 public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
     @Query("""
            select ur from UserRole ur
+           join fetch ur.role r
            where ur.user.id = :userId and ur.status = :status
            """)
     List<UserRole> findByUserIdAndStatus(UUID userId, UserRoleStatus status);
