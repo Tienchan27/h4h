@@ -33,6 +33,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,7 +100,11 @@ public class AuthService {
         user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setStatus(UserStatus.PENDING_VERIFICATION);
-        user = userRepository.save(user);
+        try {
+            user = userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ApiException("Email already exists");
+        }
         assignRole(user, RoleName.STUDENT);
         issueOtp(normalizedEmail);
     }
@@ -107,10 +112,13 @@ public class AuthService {
     @Transactional
     public void resendOtp(String email) {
         String normalizedEmail = normalizeEmail(email);
-        User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new ApiException("User not found"));
+        Optional<User> userOptional = userRepository.findByEmail(normalizedEmail);
+        if (userOptional.isEmpty()) {
+            return;
+        }
+        User user = userOptional.get();
         if (user.getStatus() == UserStatus.ACTIVE) {
-            throw new ApiException("User already verified");
+            return;
         }
 
         // Check for recent OTP to prevent spam
@@ -129,6 +137,7 @@ public class AuthService {
         issueOtp(normalizedEmail);
     }
 
+    @Transactional
     public AuthResponse verifyOtp(VerifyOtpRequest request, HttpServletRequest httpRequest) {
         String normalizedEmail = normalizeEmail(request.email());
         OtpVerification otp = otpVerificationRepository
@@ -137,15 +146,14 @@ public class AuthService {
                         OtpPurpose.REGISTER,
                         OtpStatus.ACTIVE
                 )
-                .orElseThrow(() -> new ApiException("OTP not found"));
+                .orElseThrow(() -> new ApiException("Invalid or expired OTP"));
 
         if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
             otp.setStatus(OtpStatus.EXPIRED);
             otpVerificationRepository.save(otp);
-            throw new ApiException("OTP expired");
+            throw new ApiException("Invalid or expired OTP");
         }
-        otp.setAttemptCount(otp.getAttemptCount() + 1);
-        if (otp.getAttemptCount() > OTP_MAX_ATTEMPTS) {
+        if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
             otp.setStatus(OtpStatus.EXPIRED);
             otpVerificationRepository.save(otp);
             throw new ApiException("Too many attempts");
@@ -153,8 +161,12 @@ public class AuthService {
 
         String hash = hashOtp(request.otp());
         if (!hash.equals(otp.getOtpHash())) {
+            otp.setAttemptCount(otp.getAttemptCount() + 1);
+            if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
+                otp.setStatus(OtpStatus.EXPIRED);
+            }
             otpVerificationRepository.save(otp);
-            throw new ApiException("Invalid OTP");
+            throw new ApiException("Invalid or expired OTP");
         }
         otp.setStatus(OtpStatus.VERIFIED);
         otpVerificationRepository.save(otp);
@@ -176,7 +188,7 @@ public class AuthService {
             throw new ApiException("Invalid credentials");
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ApiException("Account not active");
+            throw new ApiException("Invalid credentials");
         }
         return generateAuthResponse(user, httpRequest);
     }
@@ -241,7 +253,7 @@ public class AuthService {
         RefreshToken token = new RefreshToken();
         token.setTokenHash(hashToken(refreshToken));
         token.setUser(user);
-        token.setExpiresAt(LocalDateTime.now().plusSeconds(604800)); // 7 days
+        token.setExpiresAt(LocalDateTime.now().plusSeconds(jwtService.getRefreshTokenTtlSeconds()));
         token.setIpAddress(getClientIp(httpRequest));
         token.setUserAgent(httpRequest.getHeader("User-Agent"));
         refreshTokenRepository.save(token);

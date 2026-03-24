@@ -1,11 +1,15 @@
+import { colors } from '../../styles/colors';
+
 function Card({ children, featured = false }) {
   return (
     <div
       style={{
-        background: featured ? '#FFF4D6' : '#FAF3E0',
-        border: '4px solid #8B6F47',
-        borderRadius: '24px',
-        padding: 18,
+        background: colors.neutral.white,
+        border: featured
+          ? `1px solid ${colors.primary.main}`
+          : `1px solid ${colors.neutral.border}`,
+        borderRadius: '12px',
+        padding: 16,
       }}
     >
       {children}

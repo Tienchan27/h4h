@@ -22,10 +22,10 @@ function OTPVerification({ email, onSuccess, onError }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <p style={{ marginTop: 0, color: '#4A5568' }}>Nhap OTP da gui ve email: {email}</p>
-      <Input label="OTP" icon="🔐" value={otp} onChange={(e) => setOtp(e.target.value)} />
+      <p style={{ marginTop: 0, color: '#64748b' }}>Enter the OTP sent to: {email}</p>
+      <Input label="One-Time Password" value={otp} onChange={(e) => setOtp(e.target.value)} />
       <Button type="submit" loading={loading}>
-        Xac thuc OTP
+        Verify OTP
       </Button>
     </form>
   );

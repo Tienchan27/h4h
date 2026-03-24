@@ -51,7 +51,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleUnhandled(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(error("INTERNAL_ERROR", ex.getMessage()));
+                .body(error("INTERNAL_ERROR", "An unexpected error occurred"));
     }
 
     private Map<String, Object> error(String code, String message) {

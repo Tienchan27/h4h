@@ -58,10 +58,18 @@ MAIL_PORT=1025
 Notes:
 
 - In Docker deployment, app uses `SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/tms_db`.
+- In Docker deployment, app SMTP is pinned by compose to `MAIL_HOST=mailpit` and `MAIL_PORT=1025`.
 - Frontend production build uses `REACT_APP_API_URL=/api` for same-origin API calls.
 - `GOOGLE_CLIENT_ID` and `REACT_APP_GOOGLE_CLIENT_ID` in root `.env` must match.
 - `JWT_SECRET` should be a strong secret (at least 32 bytes for HS256).
 - Docker dev stack includes Mailpit for OTP delivery.
+
+For non-Docker local backend run, use host SMTP values in root `.env`:
+
+```env
+MAIL_HOST=localhost
+MAIL_PORT=1025
+```
 
 ## OTP email in Docker dev
 

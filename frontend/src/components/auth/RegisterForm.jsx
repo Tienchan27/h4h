@@ -26,23 +26,21 @@ function RegisterForm({ onRegistered, onError }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Input label="Ho ten" icon="👤" value={form.name} onChange={(e) => updateField('name', e.target.value)} />
+      <Input label="Full Name" value={form.name} onChange={(e) => updateField('name', e.target.value)} />
       <Input
         label="Email"
-        icon="📧"
         type="email"
         value={form.email}
         onChange={(e) => updateField('email', e.target.value)}
       />
       <Input
         label="Password"
-        icon="🔒"
         type="password"
         value={form.password}
         onChange={(e) => updateField('password', e.target.value)}
       />
       <Button type="submit" loading={loading}>
-        Dang ky
+        Create Account
       </Button>
     </form>
   );

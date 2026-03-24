@@ -5,16 +5,38 @@ const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || '/api',
 });
 
-function isAuthEndpoint(url) {
+const PUBLIC_AUTH_ENDPOINTS = new Set([
+  '/auth/register',
+  '/auth/verify-otp',
+  '/auth/resend-otp',
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/google',
+]);
+
+function normalizePath(url) {
   if (!url) {
-    return false;
+    return '';
   }
-  return /^\/?auth(\/|$)/.test(url);
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname;
+    } catch {
+      return url;
+    }
+  }
+  return url.startsWith('/') ? url : `/${url}`;
+}
+
+function isPublicAuthEndpoint(url) {
+  const path = normalizePath(url);
+  return PUBLIC_AUTH_ENDPOINTS.has(path);
 }
 
 api.interceptors.request.use((config) => {
   const token = getAccessToken();
-  if (token && !isAuthEndpoint(config.url || '')) {
+  if (token && !isPublicAuthEndpoint(config.url || '')) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;

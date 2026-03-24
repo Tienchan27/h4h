@@ -17,9 +17,12 @@ function DashboardPage() {
       try {
         const response = await api.get('/users/me/profile');
         setProfile(response.data);
-      } catch {
-        clearAuthSession();
-        navigate('/');
+      } catch (error) {
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+          clearAuthSession();
+          navigate('/');
+        }
       }
     }
     loadProfile();
@@ -37,24 +40,24 @@ function DashboardPage() {
   return (
     <div className="page">
       <div className="container">
-        <h1 className="title">🏆 Dashboard</h1>
-        <p className="subtitle">Chao mung {profile?.name || user?.name || user?.email} quay tro lai!</p>
+        <h1 className="title">Dashboard</h1>
+        <p className="subtitle">Welcome back, {profile?.name || user?.name || user?.email}.</p>
 
         <div className="grid-3" style={{ marginTop: 18 }}>
           <Card featured>
             <h3 className="title" style={{ fontSize: 18 }}>
-              User Info
+              User Profile
             </h3>
             <p>Email: {profile?.email || user?.email}</p>
-            <p>Phone: {profile?.phoneNumber || 'Chua cap nhat'}</p>
+            <p>Phone: {profile?.phoneNumber || 'Not provided'}</p>
           </Card>
           <Card>
             <h3 className="title" style={{ fontSize: 18 }}>
-              Achievement
+              Status
             </h3>
             <div className="badge-row">
-              <Badge>📚 Active Learner</Badge>
-              <Badge>🎯 Weekly Goal</Badge>
+              <Badge>Authenticated</Badge>
+              <Badge>Profile Ready</Badge>
             </div>
           </Card>
           <Card>

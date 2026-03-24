@@ -1,10 +1,12 @@
 :root {
-  --primary: #e4572e;
-  --primary-dark: #d6452f;
-  --cream: #f5e6c8;
-  --beige: #faf3e0;
-  --brown: #8b6f47;
-  --text: #2d3748;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --background: #ffffff;
+  --surface: #f8fafc;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text: #0f172a;
+  --text-muted: #64748b;
 }
 
 * {
@@ -15,7 +17,7 @@ body {
   margin: 0;
   font-family: 'Inter', 'Segoe UI', sans-serif;
   color: var(--text);
-  background: var(--cream);
+  background: var(--background);
 }
 
 a {
@@ -25,24 +27,22 @@ a {
 .page {
   min-height: 100vh;
   padding: 24px;
-  background: radial-gradient(circle at top right, #fff4d6, var(--cream));
+  background: var(--background);
 }
 
 .container {
-  max-width: 1080px;
+  max-width: 1120px;
   margin: 0 auto;
 }
 
 .title {
   margin: 0;
-  font-family: 'Poppins', 'Inter', sans-serif;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .subtitle {
-  color: #4a5568;
+  color: var(--text-muted);
   margin-top: 8px;
 }
 
@@ -60,9 +60,9 @@ a {
 
 .auth-separator {
   text-align: center;
-  color: #718096;
+  color: var(--text-muted);
   margin: 16px 0;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .badge-row {
@@ -70,6 +70,40 @@ a {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+button {
+  font-family: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 @media (min-width: 640px) {

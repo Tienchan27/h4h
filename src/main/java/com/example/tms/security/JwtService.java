@@ -21,6 +21,8 @@ public class JwtService {
     private static final String TOKEN_TYPE_CLAIM = "type";
     private static final String ACCESS_TOKEN_TYPE = "access";
     private static final String REFRESH_TOKEN_TYPE = "refresh";
+    private static final long ACCESS_TOKEN_TTL_SECONDS = 3600L;
+    private static final long REFRESH_TOKEN_TTL_SECONDS = 604800L;
 
     public JwtService(@Value("${app.security.jwt-secret}") String secret) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
@@ -33,7 +35,7 @@ public class JwtService {
                 .claim("email", email)
                 .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(3600))) // 1 hour
+                .expiration(Date.from(now.plusSeconds(ACCESS_TOKEN_TTL_SECONDS)))
                 .signWith(key)
                 .compact();
     }
@@ -45,9 +47,13 @@ public class JwtService {
                 .claim("email", email)
                 .claim(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE)
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(604800))) // 7 days
+                .expiration(Date.from(now.plusSeconds(REFRESH_TOKEN_TTL_SECONDS)))
                 .signWith(key)
                 .compact();
+    }
+
+    public long getRefreshTokenTtlSeconds() {
+        return REFRESH_TOKEN_TTL_SECONDS;
     }
 
     public Claims validateToken(String token) {

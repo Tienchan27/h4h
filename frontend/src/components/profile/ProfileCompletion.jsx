@@ -14,7 +14,7 @@ function extractApiErrorMessage(error) {
       return firstDetail;
     }
   }
-  return error?.response?.data?.message || 'Cap nhat ho so that bai';
+  return error?.response?.data?.message || 'Failed to update profile';
 }
 
 function ProfileCompletion({ user, onCompleted, onError }) {
@@ -33,7 +33,7 @@ function ProfileCompletion({ user, onCompleted, onError }) {
   async function handleSubmit(event) {
     event.preventDefault();
     if (!requirePhoneOrFacebook(form.phoneNumber, form.facebookUrl)) {
-      onError?.('Can it nhat phone hoac Facebook URL');
+      onError?.('Provide at least phone number or Facebook URL');
       return;
     }
 
@@ -52,32 +52,29 @@ function ProfileCompletion({ user, onCompleted, onError }) {
   return (
     <Card featured>
       <h2 className="title" style={{ fontSize: 24 }}>
-        Hoan thien ho so
+        Complete Profile
       </h2>
-      <p className="subtitle">🎉 Chao mung {user?.name || 'ban'}! Hoan thien thong tin de bat dau.</p>
+      <p className="subtitle">Welcome {user?.name || 'user'}, complete your profile to continue.</p>
       <form onSubmit={handleSubmit}>
-        <Input label="Email (tu Google)" icon="📧" value={user?.email || ''} disabled />
+        <Input label="Email (from Google)" value={user?.email || ''} disabled />
         <Input
-          label="So dien thoai"
-          icon="📱"
+          label="Phone Number"
           value={form.phoneNumber}
           onChange={(e) => updateField('phoneNumber', e.target.value)}
         />
         <Input
           label="Facebook URL"
-          icon="👥"
           value={form.facebookUrl}
           onChange={(e) => updateField('facebookUrl', e.target.value)}
         />
         <Input
-          label="So dien thoai phu huynh"
-          icon="👨‍👩‍👧"
+          label="Parent Phone (optional)"
           value={form.parentPhone}
           onChange={(e) => updateField('parentPhone', e.target.value)}
         />
-        <Input label="Dia chi" icon="🏠" value={form.address} onChange={(e) => updateField('address', e.target.value)} />
+        <Input label="Address (optional)" value={form.address} onChange={(e) => updateField('address', e.target.value)} />
         <Button type="submit" loading={loading}>
-          Hoan thanh dang ky
+          Save Profile
         </Button>
       </form>
     </Card>

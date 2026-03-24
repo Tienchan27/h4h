@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import ProfileCompletionPage from './pages/ProfileCompletionPage';
 import DashboardPage from './pages/DashboardPage';
+import ApiTesterPage from './pages/ApiTesterPage';
 import { isAuthenticated, getAuthUser } from './utils/storage';
 
 function RequireAuth({ children }) {
@@ -10,13 +11,19 @@ function RequireAuth({ children }) {
 
 function RequireProfileCompletion({ children }) {
   const user = getAuthUser();
-  return user?.needsProfileCompletion ? children : <Navigate to="/dashboard" replace />;
+  return user?.needsProfileCompletion !== false ? children : <Navigate to="/dashboard" replace />;
+}
+
+function RequireCompletedProfile({ children }) {
+  const user = getAuthUser();
+  return user?.needsProfileCompletion !== false ? <Navigate to="/profile-completion" replace /> : children;
 }
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/api-tester" element={<ApiTesterPage />} />
       <Route
         path="/profile-completion"
         element={
@@ -31,7 +38,9 @@ function App() {
         path="/dashboard"
         element={
           <RequireAuth>
-            <DashboardPage />
+            <RequireCompletedProfile>
+              <DashboardPage />
+            </RequireCompletedProfile>
           </RequireAuth>
         }
       />

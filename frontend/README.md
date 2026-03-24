@@ -1,70 +1,49 @@
-# Getting Started with Create React App
+# Frontend Overview
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This frontend provides:
 
-## Available Scripts
+- Authentication and account onboarding flows.
+- A minimal white UI style system.
+- An API Tester page for running backend requests from the browser.
 
-In the project directory, you can run:
+## Routes
 
-### `npm start`
+- `/` Authentication page (sign in, sign up, OTP, Google sign-in)
+- `/profile-completion` Profile completion form for new users
+- `/dashboard` User dashboard after authentication
+- `/api-tester` Postman-like API testing page
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Environment
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Create `frontend/.env`:
 
-### `npm test`
+```env
+REACT_APP_API_URL=/api
+REACT_APP_GOOGLE_CLIENT_ID=your-google-client-id
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+`REACT_APP_API_URL=/api` is recommended when frontend is served behind Nginx reverse proxy.
 
-### `npm run build`
+## Scripts
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+From `frontend/`:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- `npm start` start local development server
+- `npm run build` create production build
+- `npm test` run tests
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## API Tester workflow
 
-### `npm run eject`
+1. Open `/api-tester`.
+2. Select a domain and endpoint template.
+3. Optionally edit path params, query, headers, and body JSON.
+4. Choose auth mode:
+   - `No Auth` for public endpoints.
+   - `Bearer Token` for protected endpoints.
+5. Click **Send Request** to view:
+   - status code
+   - response headers
+   - response body
+6. Use the request history panel to review recent calls.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+For protected requests, the page can auto-fill token from local storage after login.

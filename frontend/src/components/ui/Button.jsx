@@ -1,18 +1,20 @@
+import { colors } from '../../styles/colors';
+
 const styles = {
   primary: {
-    background: '#E4572E',
+    background: colors.primary.main,
     color: '#fff',
-    border: '3px solid #D6452F',
+    border: `1px solid ${colors.primary.dark}`,
   },
   secondary: {
-    background: '#FAF3E0',
-    color: '#2D3748',
-    border: '3px solid #8B6F47',
+    background: colors.neutral.white,
+    color: colors.text.primary,
+    border: `1px solid ${colors.neutral.borderStrong}`,
   },
   outline: {
     background: 'transparent',
-    color: '#2D3748',
-    border: '3px dashed #8B6F47',
+    color: colors.text.primary,
+    border: `1px solid ${colors.neutral.borderStrong}`,
   },
 };
 
@@ -24,12 +26,12 @@ function Button({ children, type = 'button', variant = 'primary', disabled, load
       onClick={onClick}
       style={{
         ...styles[variant],
-        borderRadius: '22px',
-        padding: '10px 16px',
-        fontWeight: 700,
-        textTransform: 'uppercase',
+        borderRadius: '10px',
+        padding: '10px 14px',
+        fontWeight: 600,
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
         width: '100%',
+        opacity: disabled || loading ? 0.6 : 1,
       }}
     >
       {loading ? 'Loading...' : children}

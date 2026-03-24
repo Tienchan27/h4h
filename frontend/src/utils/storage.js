@@ -51,3 +51,10 @@ export function markProfileCompleted() {
   user.needsProfileCompletion = false;
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
 }
+
+export function setNeedsProfileCompletion(needsProfileCompletion) {
+  const user = getAuthUser();
+  if (!user) return;
+  user.needsProfileCompletion = !!needsProfileCompletion;
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}

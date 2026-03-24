@@ -5,7 +5,7 @@ services:
       dockerfile: deploy/nginx/Dockerfile
       args:
         REACT_APP_API_URL: /api
-        REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID}
+        REACT_APP_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     depends_on:
       app:
         condition: service_started
@@ -43,16 +43,6 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  mailpit:
-    image: axllent/mailpit:latest
-    restart: unless-stopped
-    ports:
-      - "8025:8025"
-    expose:
-      - "1025"
-    networks:
-      - tms-network
-
   postgres-db:
     image: postgres:16.4-alpine
     container_name: postgres-db
@@ -81,13 +71,24 @@ services:
     restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.local}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-change-this-password}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin-password}
     ports:
       - "5050:80"
     networks:
       - tms-network
     depends_on:
       - postgres-db
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    expose:
+      - "1025"
+    networks:
+      - tms-network
 
 networks:
   tms-network:

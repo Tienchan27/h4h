@@ -1,7 +1,9 @@
 package com.example.tms.security;
 
 import com.example.tms.entity.UserRole;
+import com.example.tms.entity.enums.UserStatus;
 import com.example.tms.entity.enums.UserRoleStatus;
+import com.example.tms.repository.UserRepository;
 import com.example.tms.repository.UserRoleRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -24,10 +26,16 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserRoleRepository userRoleRepository;
+    private final UserRepository userRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserRoleRepository userRoleRepository) {
+    public JwtAuthenticationFilter(
+            JwtService jwtService,
+            UserRoleRepository userRoleRepository,
+            UserRepository userRepository
+    ) {
         this.jwtService = jwtService;
         this.userRoleRepository = userRoleRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -48,6 +56,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwtService.validateAccessToken(token);
 
             UUID userId = jwtService.extractUserId(token);
+            boolean isActiveUser = userRepository.findById(userId)
+                    .map(user -> user.getStatus() == UserStatus.ACTIVE)
+                    .orElse(false);
+            if (!isActiveUser) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
             List<GrantedAuthority> authorities = userRoleRepository
                     .findByUserIdAndStatus(userId, UserRoleStatus.ACTIVE)
                     .stream()

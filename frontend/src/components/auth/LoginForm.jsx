@@ -23,16 +23,15 @@ function LoginForm({ onSuccess, onError }) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <Input label="Email" icon="📧" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <Input
         label="Password"
-        icon="🔒"
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
       />
       <Button type="submit" loading={loading}>
-        Dang nhap
+        Sign In
       </Button>
     </form>
   );
