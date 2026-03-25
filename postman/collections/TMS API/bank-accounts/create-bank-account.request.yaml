@@ -1,0 +1,50 @@
+$kind: http-request
+name: Create Bank Account
+method: POST
+url: '{{baseUrl}}/bank-accounts'
+order: 1000
+description: Create a new bank account for receiving payouts
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+body:
+  type: json
+  content: |-
+    {
+      "bankName": "Vietcombank",
+      "accountNumber": "1234567890123",
+      "accountHolderName": "NGUYEN VAN A"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200 or 201", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      pm.test("Response is JSON", function () {
+          pm.response.to.be.json;
+      });
+
+      if (pm.response.code === 201 || pm.response.code === 200) {
+          const response = pm.response.json();
+
+          pm.test("Response is an object with id", function () {
+              pm.expect(response).to.be.an("object");
+              pm.expect(response).to.have.property("id");
+          });
+
+          if (response.id) {
+              pm.environment.set("bankAccountId", response.id);
+          }
+      }

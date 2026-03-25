@@ -1,9 +1,9 @@
 -- Add contact information fields to users table
 ALTER TABLE users
-ADD COLUMN phone_number VARCHAR(20),
-ADD COLUMN facebook_url VARCHAR(255),
-ADD COLUMN parent_phone VARCHAR(20),
-ADD COLUMN address TEXT;
+ADD COLUMN IF NOT EXISTS phone_number VARCHAR(20),
+ADD COLUMN IF NOT EXISTS facebook_url VARCHAR(255),
+ADD COLUMN IF NOT EXISTS parent_phone VARCHAR(20),
+ADD COLUMN IF NOT EXISTS address TEXT;
 
 -- Add check constraint: at least phone or facebook must be provided (enforced at application level)
 COMMENT ON COLUMN users.phone_number IS 'User phone number - at least phone or facebook required';
@@ -12,7 +12,7 @@ COMMENT ON COLUMN users.parent_phone IS 'Optional parent/guardian phone number';
 COMMENT ON COLUMN users.address IS 'Optional user address';
 
 -- Create tutor_bank_accounts table
-CREATE TABLE tutor_bank_accounts (
+CREATE TABLE IF NOT EXISTS tutor_bank_accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     bank_name VARCHAR(50) NOT NULL,
@@ -32,12 +32,12 @@ CREATE TABLE tutor_bank_accounts (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_tutor_bank_accounts_user_id ON tutor_bank_accounts(user_id);
-CREATE INDEX idx_tutor_bank_accounts_is_primary ON tutor_bank_accounts(is_primary);
-CREATE INDEX idx_tutor_bank_accounts_is_verified ON tutor_bank_accounts(is_verified);
+CREATE INDEX IF NOT EXISTS idx_tutor_bank_accounts_user_id ON tutor_bank_accounts(user_id);
+CREATE INDEX IF NOT EXISTS idx_tutor_bank_accounts_is_primary ON tutor_bank_accounts(is_primary);
+CREATE INDEX IF NOT EXISTS idx_tutor_bank_accounts_is_verified ON tutor_bank_accounts(is_verified);
 
 -- Unique constraint: only one primary account per user
-CREATE UNIQUE INDEX idx_one_primary_per_user
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_primary_per_user
 ON tutor_bank_accounts(user_id)
 WHERE is_primary = TRUE;
 

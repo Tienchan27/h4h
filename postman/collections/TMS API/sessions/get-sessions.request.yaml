@@ -1,0 +1,35 @@
+$kind: http-request
+name: Get Sessions by Payroll Month
+method: GET
+url: '{{baseUrl}}/sessions'
+order: 3000
+description: Get sessions filtered by payroll month
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+queryParams:
+  - key: payrollMonth
+    value: '2024-01'
+    description: Payroll month in YYYY-MM format
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.expect(pm.response.code).to.equal(200);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      pm.test("Response is JSON", function () {
+          pm.response.to.be.json;
+      });
+
+      pm.test("Response is an array", function () {
+          const jsonData = pm.response.json();
+          pm.expect(jsonData).to.be.an("array");
+      });

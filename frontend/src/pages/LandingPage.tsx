@@ -32,6 +32,10 @@ function LandingPage() {
       navigate('/profile-completion');
       return;
     }
+    if (user?.needsTutorOnboarding) {
+      navigate('/tutor-onboarding');
+      return;
+    }
     navigate('/app');
   }
 

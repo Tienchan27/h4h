@@ -1,0 +1,37 @@
+$kind: http-request
+name: Confirm Payout Paid
+method: POST
+url: '{{baseUrl}}/payouts/{{payoutId}}/confirm-paid'
+order: 3000
+description: Confirm that a payout has been paid
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: payoutId
+    value: '{{payoutId}}'
+    description: Payout UUID
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.expect(pm.response.code).to.equal(200);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      if (pm.response.code !== 204 && pm.response.text()) {
+          pm.test("Response is JSON", function () {
+              pm.response.to.be.json;
+          });
+
+          pm.test("Response is an object", function () {
+              const jsonData = pm.response.json();
+              pm.expect(jsonData).to.be.an("object");
+          });
+      }

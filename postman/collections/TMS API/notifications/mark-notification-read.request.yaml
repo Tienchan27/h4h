@@ -1,0 +1,37 @@
+$kind: http-request
+name: Mark Notification as Read
+method: POST
+url: '{{baseUrl}}/notifications/{{notificationId}}/read'
+order: 2000
+description: Mark a notification as read
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: notificationId
+    value: '{{notificationId}}'
+    description: Notification UUID
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200 or 204", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 204]);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      if (pm.response.code !== 204 && pm.response.text()) {
+          pm.test("Response is JSON", function () {
+              pm.response.to.be.json;
+          });
+
+          pm.test("Response is an object", function () {
+              const jsonData = pm.response.json();
+              pm.expect(jsonData).to.be.an("object");
+          });
+      }

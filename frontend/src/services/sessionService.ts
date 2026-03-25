@@ -1,5 +1,10 @@
 import api from './api';
-import { CreateSessionRequest, SessionResponse, UpdateSessionFinancialRequest } from '../types/sessions';
+import {
+  CreateSessionRequest,
+  SessionResponse,
+  TutorSessionClassOptionResponse,
+  UpdateSessionFinancialRequest,
+} from '../types/sessions';
 
 export async function listSessionsByPayrollMonth(payrollMonth: string): Promise<SessionResponse[]> {
   const response = await api.get<SessionResponse[]>('/sessions', {
@@ -10,6 +15,11 @@ export async function listSessionsByPayrollMonth(payrollMonth: string): Promise<
 
 export async function createSession(payload: CreateSessionRequest): Promise<SessionResponse> {
   const response = await api.post<SessionResponse>('/sessions', payload);
+  return response.data;
+}
+
+export async function listMySessionClasses(): Promise<TutorSessionClassOptionResponse[]> {
+  const response = await api.get<TutorSessionClassOptionResponse[]>('/sessions/my-classes');
   return response.data;
 }
 

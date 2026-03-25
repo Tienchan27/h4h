@@ -9,6 +9,13 @@ export interface SessionClassRef {
   subject?: SessionSubject;
 }
 
+export interface TutorSessionClassOptionResponse {
+  id: string;
+  subjectName: string;
+  pricePerHour: number;
+  defaultSalaryRate: number;
+}
+
 export interface SessionResponse {
   id: string;
   tutorClass?: SessionClassRef;

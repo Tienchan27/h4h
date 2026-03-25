@@ -1,6 +1,7 @@
 package com.example.tms.api;
 
 import com.example.tms.api.dto.dashboard.TutorDashboardResponse;
+import com.example.tms.api.dto.dashboard.TutorClassOverviewResponse;
 import com.example.tms.api.dto.dashboard.TutorSummaryResponse;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.DashboardService;
@@ -37,5 +38,10 @@ public class DashboardController {
     @GetMapping("/tutor/me")
     public List<TutorDashboardResponse> tutorMe() {
         return dashboardService.tutorSelf(currentUserResolver.requireUser());
+    }
+
+    @GetMapping("/tutor/classes")
+    public List<TutorClassOverviewResponse> tutorClasses() {
+        return dashboardService.tutorClassOverview(currentUserResolver.requireUser());
     }
 }

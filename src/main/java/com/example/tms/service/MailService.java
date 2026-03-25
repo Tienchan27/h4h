@@ -28,4 +28,17 @@ public class MailService {
             throw new ApiException("Failed to deliver OTP email. Please try again later.");
         }
     }
+
+    public void sendTutorInvitationEmail(String to) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Tutor invitation from Tutor Management System");
+            message.setText("You have been invited as a tutor. Please sign in or register with this email to activate your tutor access.");
+            mailSender.send(message);
+        } catch (Exception ex) {
+            log.error("Tutor invitation email sending failed for {}: {}", to, ex.getMessage(), ex);
+            throw new ApiException("Failed to deliver invitation email. Please try again later.");
+        }
+    }
 }

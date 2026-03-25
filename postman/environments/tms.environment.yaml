@@ -1,0 +1,36 @@
+name: tms
+values:
+  - key: baseUrl
+    value: 'http://localhost:8080'
+    enabled: true
+    type: default
+  - key: mailpitUrl
+    value: ''
+    enabled: true
+  - key: email
+    value: ''
+    enabled: true
+  - key: password
+    value: ''
+    enabled: true
+  - key: otp
+    value: ''
+    enabled: true
+  - key: accessToken
+    value: ''
+    enabled: true
+  - key: refreshToken
+    value: ''
+    enabled: true
+  - key: bankAccountId
+    value: ''
+    enabled: true
+  - key: payoutId
+    value: ''
+    enabled: true
+  - key: sessionId
+    value: ''
+    enabled: true
+  - key: tutorId
+    value: ''
+    enabled: true

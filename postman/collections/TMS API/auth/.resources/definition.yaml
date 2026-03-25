@@ -1,0 +1,7 @@
+$kind: collection
+name: Auth
+description: Authentication endpoints for user registration, login, OTP verification, and OAuth
+order: 1000
+auth:
+  type: noauth
+  credentials: []

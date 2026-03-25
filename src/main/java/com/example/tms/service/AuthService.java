@@ -9,10 +9,8 @@ import com.example.tms.api.dto.auth.RegisterRequest;
 import com.example.tms.api.dto.auth.VerifyOtpRequest;
 import com.example.tms.entity.OtpVerification;
 import com.example.tms.entity.RefreshToken;
-import com.example.tms.entity.Role;
 import com.example.tms.entity.User;
 import com.example.tms.entity.UserProvider;
-import com.example.tms.entity.UserRole;
 import com.example.tms.entity.enums.OtpPurpose;
 import com.example.tms.entity.enums.OtpStatus;
 import com.example.tms.entity.enums.ProviderType;
@@ -22,7 +20,7 @@ import com.example.tms.entity.enums.UserStatus;
 import com.example.tms.exception.ApiException;
 import com.example.tms.repository.OtpVerificationRepository;
 import com.example.tms.repository.RefreshTokenRepository;
-import com.example.tms.repository.RoleRepository;
+import com.example.tms.repository.TutorBankAccountRepository;
 import com.example.tms.repository.UserProviderRepository;
 import com.example.tms.repository.UserRepository;
 import com.example.tms.repository.UserRoleRepository;
@@ -52,12 +50,14 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 public class AuthService {
     private final UserRepository userRepository;
-    private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
     private final OtpVerificationRepository otpVerificationRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final TutorBankAccountRepository tutorBankAccountRepository;
     private final UserProviderRepository userProviderRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserRoleService userRoleService;
+    private final TutorInvitationService tutorInvitationService;
     private final MailService mailService;
     private final JwtService jwtService;
     private final String googleClientId;
@@ -68,23 +68,27 @@ public class AuthService {
 
     public AuthService(
             UserRepository userRepository,
-            RoleRepository roleRepository,
             UserRoleRepository userRoleRepository,
             OtpVerificationRepository otpVerificationRepository,
             RefreshTokenRepository refreshTokenRepository,
+            TutorBankAccountRepository tutorBankAccountRepository,
             UserProviderRepository userProviderRepository,
             PasswordEncoder passwordEncoder,
+            UserRoleService userRoleService,
+            TutorInvitationService tutorInvitationService,
             MailService mailService,
             JwtService jwtService,
             @Value("${GOOGLE_CLIENT_ID}") String googleClientId
     ) {
         this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
         this.otpVerificationRepository = otpVerificationRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.tutorBankAccountRepository = tutorBankAccountRepository;
         this.userProviderRepository = userProviderRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userRoleService = userRoleService;
+        this.tutorInvitationService = tutorInvitationService;
         this.mailService = mailService;
         this.jwtService = jwtService;
         this.googleClientId = googleClientId;
@@ -106,7 +110,8 @@ public class AuthService {
         } catch (DataIntegrityViolationException ex) {
             throw new ApiException("Email already exists");
         }
-        assignRole(user, RoleName.STUDENT);
+        userRoleService.ensureActiveRole(user, RoleName.STUDENT, user);
+        tutorInvitationService.acceptPendingInvitation(user);
         issueOtp(normalizedEmail);
     }
 
@@ -184,12 +189,12 @@ public class AuthService {
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         String normalizedEmail = normalizeEmail(request.email());
         User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new ApiException("Invalid credentials"));
+                .orElseThrow(() -> new ApiException("Invalid email or password"));
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new ApiException("Invalid credentials");
+            throw new ApiException("Invalid email or password");
         }
         if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new ApiException("Invalid credentials");
+            throw new ApiException("The account is no longer active. Please contact support.");
         }
         return generateAuthResponse(user, httpRequest);
     }
@@ -259,7 +264,13 @@ public class AuthService {
         token.setUserAgent(httpRequest.getHeader("User-Agent"));
         refreshTokenRepository.save(token);
 
-        return new AuthResponse(user.getId(), user.getEmail(), accessToken, refreshToken);
+        return new AuthResponse(
+                user.getId(),
+                user.getEmail(),
+                accessToken,
+                refreshToken,
+                needsTutorOnboarding(user)
+        );
     }
 
     private String getClientIp(HttpServletRequest request) {
@@ -268,20 +279,6 @@ public class AuthService {
             return xForwardedFor.split(",")[0].trim();
         }
         return request.getRemoteAddr();
-    }
-
-    private void assignRole(User user, RoleName roleName) {
-        Role role = roleRepository.findByName(roleName).orElseGet(() -> {
-            Role created = new Role();
-            created.setName(roleName);
-            return roleRepository.save(created);
-        });
-        UserRole userRole = new UserRole();
-        userRole.setUser(user);
-        userRole.setRole(role);
-        userRole.setStatus(UserRoleStatus.ACTIVE);
-        userRole.setUpdatedBy(user);
-        userRoleRepository.save(userRole);
     }
 
     private String hashOtp(String otp) {
@@ -432,7 +429,8 @@ public class AuthService {
                 authResponse.accessToken(),
                 authResponse.refreshToken(),
                 isNewUser,
-                needsProfileCompletion(user)
+                needsProfileCompletion(user),
+                authResponse.needsTutorOnboarding()
         );
     }
 
@@ -447,7 +445,8 @@ public class AuthService {
         } catch (DataIntegrityViolationException ex) {
             throw new ApiException("Email already exists");
         }
-        assignRole(user, RoleName.STUDENT);
+        userRoleService.ensureActiveRole(user, RoleName.STUDENT, user);
+        tutorInvitationService.acceptPendingInvitation(user);
         return user;
     }
 
@@ -470,6 +469,14 @@ public class AuthService {
         boolean hasPhone = user.getPhoneNumber() != null && !user.getPhoneNumber().isBlank();
         boolean hasFacebook = user.getFacebookUrl() != null && !user.getFacebookUrl().isBlank();
         return !hasPhone && !hasFacebook;
+    }
+
+    private boolean needsTutorOnboarding(User user) {
+        boolean isTutor = userRoleRepository.hasRole(user.getId(), RoleName.TUTOR, UserRoleStatus.ACTIVE);
+        if (!isTutor) {
+            return false;
+        }
+        return tutorBankAccountRepository.countByUserId(user.getId()) == 0;
     }
 
     private boolean isEmailVerified(Object emailVerifiedClaim) {

@@ -4,6 +4,7 @@ export interface AuthUser {
   name: string;
   picture: string | null;
   needsProfileCompletion: boolean;
+  needsTutorOnboarding: boolean;
 }
 
 export interface AuthSessionPayload {
@@ -14,6 +15,8 @@ export interface AuthSessionPayload {
   refreshToken: string;
   picture?: string | null;
   needsProfileCompletion?: boolean;
+  needsTutorOnboarding?: boolean;
+  isNewUser?: boolean;
 }
 
 export interface LoginPayload {
@@ -37,6 +40,7 @@ export interface AuthTokensResponse {
   email: string;
   accessToken: string;
   refreshToken: string;
+  needsTutorOnboarding: boolean;
 }
 
 export interface UserProfile {

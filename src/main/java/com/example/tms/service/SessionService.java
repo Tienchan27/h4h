@@ -1,6 +1,7 @@
 package com.example.tms.service;
 
 import com.example.tms.api.dto.session.CreateSessionRequest;
+import com.example.tms.api.dto.session.TutorSessionClassOptionResponse;
 import com.example.tms.api.dto.session.UpdateSessionFinancialRequest;
 import com.example.tms.entity.Session;
 import com.example.tms.entity.SessionFinancialEditAudit;
@@ -115,6 +116,19 @@ public class SessionService {
 
     public List<Session> getByPayrollMonth(String payrollMonth) {
         return sessionRepository.findByPayrollMonth(payrollMonth);
+    }
+
+    public List<TutorSessionClassOptionResponse> getTutorClasses(User tutor) {
+        roleGuard.requireRole(tutor, RoleName.TUTOR);
+        return tutorClassRepository.findByTutorId(tutor.getId())
+                .stream()
+                .map(tutorClass -> new TutorSessionClassOptionResponse(
+                        tutorClass.getId(),
+                        tutorClass.getSubject().getName(),
+                        tutorClass.getPricePerHour(),
+                        tutorClass.getDefaultSalaryRate()
+                ))
+                .toList();
     }
 
     private void auditIfChanged(Session session, User tutor, String fieldName, String oldValue, String newValue, String reason) {

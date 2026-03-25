@@ -1,6 +1,7 @@
 package com.example.tms.api;
 
 import com.example.tms.api.dto.session.CreateSessionRequest;
+import com.example.tms.api.dto.session.TutorSessionClassOptionResponse;
 import com.example.tms.api.dto.session.UpdateSessionFinancialRequest;
 import com.example.tms.entity.Session;
 import com.example.tms.security.CurrentUserResolver;
@@ -45,5 +46,10 @@ public class SessionController {
     @GetMapping
     public List<Session> byMonth(@RequestParam String payrollMonth) {
         return sessionService.getByPayrollMonth(payrollMonth);
+    }
+
+    @GetMapping("/my-classes")
+    public List<TutorSessionClassOptionResponse> myClasses() {
+        return sessionService.getTutorClasses(currentUserResolver.requireUser());
     }
 }

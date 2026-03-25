@@ -1,0 +1,4 @@
+$kind: collection
+name: Sessions
+description: Tutoring session management endpoints
+order: 3000

@@ -1,0 +1,16 @@
+package com.example.tms.api.dto.dashboard;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.UUID;
+
+public record TutorClassOverviewResponse(
+        UUID classId,
+        String subjectName,
+        String classStatus,
+        BigDecimal pricePerHour,
+        BigDecimal defaultSalaryRate,
+        long sessionCount,
+        LocalDate latestSessionDate
+) {
+}

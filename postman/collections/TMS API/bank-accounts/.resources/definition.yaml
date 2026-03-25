@@ -1,0 +1,4 @@
+$kind: collection
+name: Bank Accounts
+description: Bank account management endpoints for tutors
+order: 4000

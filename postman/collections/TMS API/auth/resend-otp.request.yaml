@@ -1,0 +1,37 @@
+$kind: http-request
+name: Resend OTP
+method: POST
+url: '{{baseUrl}}/auth/resend-otp'
+order: 3000
+description: Resend OTP code to email
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "john.doe@example.com"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.expect(pm.response.code).to.equal(200);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      if (pm.response.code !== 204 && pm.response.text()) {
+          pm.test("Response is JSON", function () {
+              pm.response.to.be.json;
+          });
+
+          pm.test("Response is an object", function () {
+              const jsonData = pm.response.json();
+              pm.expect(jsonData).to.be.an("object");
+          });
+      }

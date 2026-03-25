@@ -1,0 +1,4 @@
+$kind: collection
+name: Admin Bank Accounts
+description: Admin endpoints for bank account verification
+order: 5000

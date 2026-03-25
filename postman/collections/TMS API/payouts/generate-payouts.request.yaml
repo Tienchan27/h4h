@@ -1,0 +1,38 @@
+$kind: http-request
+name: Generate Monthly Payouts
+method: POST
+url: '{{baseUrl}}/payouts/generate'
+order: 1000
+description: Generate payouts for a specific month
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+queryParams:
+  - key: payrollMonth
+    value: '2024-01'
+    description: Payroll month in YYYY-MM format
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200 or 201", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      pm.test("Response is JSON", function () {
+          pm.response.to.be.json;
+      });
+
+      pm.test("Response is an array", function () {
+          const jsonData = pm.response.json();
+          pm.expect(jsonData).to.be.an("array");
+      });

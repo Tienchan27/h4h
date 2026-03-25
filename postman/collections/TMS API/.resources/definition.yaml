@@ -1,0 +1,22 @@
+$kind: collection
+name: TMS API
+description: |-
+  Tutor Management System API Collection
+  
+  This collection contains all API endpoints for the TMS application including:
+  - Authentication (register, login, OTP verification, Google OAuth)
+  - User profile management
+  - Session management
+  - Bank account management
+  - Dashboard endpoints
+  - Notifications
+  - Payouts
+variables:
+  - key: baseUrl
+    value: '{{baseUrl}}'
+    description: Base URL for the API (from environment)
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'

@@ -16,7 +16,7 @@ function GoogleSignInButton({ onSuccess, onError }: GoogleSignInButtonProps) {
 
   return (
     <div className="google-signin">
-      <div className="google-signin-label">Or continue with Google</div>
+      <div className="google-signin-label">Continue with Google</div>
       <GoogleLogin onSuccess={handleSuccess} onError={() => onError?.(new Error('Google sign in failed'))} />
     </div>
   );

@@ -1,0 +1,4 @@
+$kind: collection
+name: Payouts
+description: Payout management endpoints for admin
+order: 8000

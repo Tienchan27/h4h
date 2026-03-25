@@ -2,6 +2,7 @@ import { ReactElement } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import ProfileCompletionPage from './pages/ProfileCompletionPage';
+import TutorOnboardingPage from './pages/TutorOnboardingPage';
 import AppShell from './components/layout/AppShell';
 import RoleGate from './components/layout/RoleGate';
 import { AppAccessProvider } from './context/AppAccessContext';
@@ -30,12 +31,25 @@ function RequireAuth({ children }: RouteGuardProps) {
 
 function RequireProfileCompletion({ children }: RouteGuardProps) {
   const user = getAuthUser();
-  return user?.needsProfileCompletion !== false ? children : <Navigate to="/app" replace />;
+  if (user?.needsProfileCompletion !== false) {
+    return children;
+  }
+  return user?.needsTutorOnboarding ? <Navigate to="/tutor-onboarding" replace /> : <Navigate to="/app" replace />;
 }
 
 function RequireCompletedProfile({ children }: RouteGuardProps) {
   const user = getAuthUser();
   return user?.needsProfileCompletion !== false ? <Navigate to="/profile-completion" replace /> : children;
+}
+
+function RequireTutorOnboarding({ children }: RouteGuardProps) {
+  const user = getAuthUser();
+  return user?.needsTutorOnboarding ? children : <Navigate to="/app" replace />;
+}
+
+function RequireNoTutorOnboarding({ children }: RouteGuardProps) {
+  const user = getAuthUser();
+  return user?.needsTutorOnboarding ? <Navigate to="/tutor-onboarding" replace /> : children;
 }
 
 function ProtectedAppLayout() {
@@ -82,11 +96,25 @@ function App() {
         }
       />
       <Route
+        path="/tutor-onboarding"
+        element={
+          <RequireAuth>
+            <RequireCompletedProfile>
+              <RequireTutorOnboarding>
+                <TutorOnboardingPage />
+              </RequireTutorOnboarding>
+            </RequireCompletedProfile>
+          </RequireAuth>
+        }
+      />
+      <Route
         path="/app"
         element={
           <RequireAuth>
             <RequireCompletedProfile>
-              <ProtectedAppLayout />
+              <RequireNoTutorOnboarding>
+                <ProtectedAppLayout />
+              </RequireNoTutorOnboarding>
             </RequireCompletedProfile>
           </RequireAuth>
         }

@@ -1,0 +1,43 @@
+$kind: http-request
+name: Link Google Account
+method: POST
+url: '{{baseUrl}}/auth/google/link'
+order: 8000
+description: Link Google account to existing password-based account
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+body:
+  type: json
+  content: |-
+    {
+      "idToken": "google-id-token-from-frontend",
+      "currentPassword": "your-current-password"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.expect(pm.response.code).to.equal(200);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      if (pm.response.code !== 204 && pm.response.text()) {
+          pm.test("Response is JSON", function () {
+              pm.response.to.be.json;
+          });
+
+          pm.test("Response is an object", function () {
+              const jsonData = pm.response.json();
+              pm.expect(jsonData).to.be.an("object");
+          });
+      }

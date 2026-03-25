@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
@@ -29,4 +30,10 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UUID> {
            where ur.role.name = :role and ur.status = :status
            """)
     List<UserRole> findByRoleAndStatus(RoleName role, UserRoleStatus status);
+
+    @Query("""
+           select ur from UserRole ur
+           where ur.user.id = :userId and ur.role.name = :role
+           """)
+    Optional<UserRole> findByUserIdAndRole(UUID userId, RoleName role);
 }

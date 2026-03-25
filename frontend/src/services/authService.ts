@@ -26,6 +26,7 @@ export async function login(payload: LoginPayload): Promise<AuthTokensResponse> 
     accessToken: data.accessToken,
     refreshToken: data.refreshToken,
     needsProfileCompletion: true,
+    needsTutorOnboarding: !!data.needsTutorOnboarding,
   });
 
   try {
@@ -51,6 +52,7 @@ export async function verifyOtp(payload: VerifyOtpPayload): Promise<AuthTokensRe
     accessToken: data.accessToken,
     refreshToken: data.refreshToken,
     needsProfileCompletion: true,
+    needsTutorOnboarding: !!data.needsTutorOnboarding,
   });
   return data;
 }

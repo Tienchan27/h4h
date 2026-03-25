@@ -1,0 +1,54 @@
+$kind: http-request
+name: Create Session
+method: POST
+url: '{{baseUrl}}/sessions'
+order: 1000
+description: Create a new tutoring session
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+body:
+  type: json
+  content: |-
+    {
+      "classId": "550e8400-e29b-41d4-a716-446655440000",
+      "date": "2024-01-15",
+      "durationHours": 1.5,
+      "tuitionAtLog": 150000,
+      "salaryRateAtLog": 100000,
+      "payrollMonth": "2024-01",
+      "note": "Regular session"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200 or 201", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 201]);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      pm.test("Response is JSON", function () {
+          pm.response.to.be.json;
+      });
+
+      if (pm.response.code === 201 || pm.response.code === 200) {
+          const response = pm.response.json();
+
+          pm.test("Response is an object with id", function () {
+              pm.expect(response).to.be.an("object");
+              pm.expect(response).to.have.property("id");
+          });
+
+          if (response.id) {
+              pm.environment.set("sessionId", response.id);
+          }
+      }

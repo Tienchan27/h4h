@@ -6,6 +6,7 @@ public record AuthResponse(
         UUID userId,
         String email,
         String accessToken,
-        String refreshToken
+        String refreshToken,
+        boolean needsTutorOnboarding
 ) {
 }

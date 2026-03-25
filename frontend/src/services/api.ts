@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { clearAuthSession, getAccessToken, getRefreshToken } from '../utils/storage';
+import { clearAuthSession, getAccessToken, getRefreshToken, setNeedsTutorOnboarding } from '../utils/storage';
 
 interface RetryRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
@@ -8,6 +8,7 @@ interface RetryRequestConfig extends InternalAxiosRequestConfig {
 interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
+  needsTutorOnboarding: boolean;
 }
 
 const api = axios.create({
@@ -40,7 +41,15 @@ function normalizePath(url?: string): string {
 
 function isPublicAuthEndpoint(url?: string): boolean {
   const path = normalizePath(url);
-  return PUBLIC_AUTH_ENDPOINTS.has(path);
+  if (PUBLIC_AUTH_ENDPOINTS.has(path)) {
+    return true;
+  }
+  // Some runtime/build combinations keep "/api" prefix in axios config.url.
+  if (path.startsWith('/api/')) {
+    const withoutApiPrefix = path.substring(4);
+    return PUBLIC_AUTH_ENDPOINTS.has(withoutApiPrefix);
+  }
+  return false;
 }
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
@@ -55,7 +64,8 @@ api.interceptors.response.use(
   (response: AxiosResponse): AxiosResponse => response,
   async (error: AxiosError): Promise<AxiosResponse> => {
     const originalRequest = (error.config || {}) as RetryRequestConfig;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const requestIsPublicAuth = isPublicAuthEndpoint(originalRequest.url);
+    if (error.response?.status === 401 && !originalRequest._retry && !requestIsPublicAuth) {
       originalRequest._retry = true;
       try {
         const refreshToken = getRefreshToken();
@@ -64,9 +74,11 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
         const response = await axios.post<RefreshTokenResponse>(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
-        const { accessToken, refreshToken: rotatedRefreshToken } = response.data;
+        const { accessToken, refreshToken: rotatedRefreshToken, needsTutorOnboarding } = response.data;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', rotatedRefreshToken);
+        setNeedsTutorOnboarding(!!needsTutorOnboarding);
+        originalRequest.headers = originalRequest.headers || {};
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getAdminTutorDetail, getAdminTutorSummary } from '../../services/dashboardService';
+import { FormEvent, useEffect, useState } from 'react';
+import { getAdminTutorDetail, getAdminTutorSummary, inviteTutor } from '../../services/dashboardService';
 import { TutorDashboardResponse, TutorSummaryResponse } from '../../types/dashboard';
 import { extractApiErrorMessage } from '../../services/authService';
 
@@ -13,6 +13,9 @@ function AdminDashboardPage() {
   const [items, setItems] = useState<TutorSummaryResponse[]>([]);
   const [detail, setDetail] = useState<TutorDashboardResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [inviteLoading, setInviteLoading] = useState<boolean>(false);
+  const [inviteEmail, setInviteEmail] = useState<string>('');
+  const [inviteMessage, setInviteMessage] = useState<string>('');
   const [error, setError] = useState<string>('');
 
   async function loadSummary(): Promise<void> {
@@ -38,6 +41,22 @@ function AdminDashboardPage() {
     }
   }
 
+  async function handleInviteTutor(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    setError('');
+    setInviteMessage('');
+    setInviteLoading(true);
+    try {
+      const response = await inviteTutor({ email: inviteEmail });
+      setInviteMessage(response.message);
+      setInviteEmail('');
+    } catch (err: unknown) {
+      setError(extractApiErrorMessage(err, 'Failed to invite tutor'));
+    } finally {
+      setInviteLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -53,6 +72,20 @@ function AdminDashboardPage() {
           </div>
           <input type="month" value={month} onChange={(event) => setMonth(event.target.value)} className="input-month" />
         </div>
+        <form onSubmit={handleInviteTutor} className="grid-form">
+          <input
+            type="email"
+            className="text-input"
+            placeholder="New tutor email"
+            value={inviteEmail}
+            onChange={(event) => setInviteEmail(event.target.value)}
+            required
+          />
+          <button className="btn btn-primary compact-btn" type="submit" disabled={inviteLoading}>
+            {inviteLoading ? 'Adding...' : 'Add Tutor'}
+          </button>
+        </form>
+        {inviteMessage ? <p className="success-text">{inviteMessage}</p> : null}
       </div>
 
       <div className="card">

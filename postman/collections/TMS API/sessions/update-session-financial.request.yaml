@@ -1,0 +1,50 @@
+$kind: http-request
+name: Update Session Financial
+method: PATCH
+url: '{{baseUrl}}/sessions/{{sessionId}}/financial'
+order: 2000
+description: Update financial information for a session
+headers:
+  - key: Content-Type
+    value: application/json
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: sessionId
+    value: '{{sessionId}}'
+    description: Session UUID
+body:
+  type: json
+  content: |-
+    {
+      "tuitionAtLog": 200000,
+      "salaryRateAtLog": 120000,
+      "payrollMonth": "2024-01",
+      "note": "Updated session",
+      "reason": "Rate adjustment"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200", function () {
+          pm.expect(pm.response.code).to.equal(200);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+
+      if (pm.response.code !== 204 && pm.response.text()) {
+          pm.test("Response is JSON", function () {
+              pm.response.to.be.json;
+          });
+
+          pm.test("Response is an object", function () {
+              const jsonData = pm.response.json();
+              pm.expect(jsonData).to.be.an("object");
+          });
+      }

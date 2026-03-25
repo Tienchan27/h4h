@@ -1,13 +1,17 @@
 package com.example.tms.service;
 
 import com.example.tms.api.dto.dashboard.TutorDashboardResponse;
+import com.example.tms.api.dto.dashboard.TutorClassOverviewResponse;
 import com.example.tms.api.dto.dashboard.TutorSummaryResponse;
+import com.example.tms.entity.Session;
+import com.example.tms.entity.TutorClass;
 import com.example.tms.entity.TutorPayout;
 import com.example.tms.entity.User;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.exception.ApiException;
+import com.example.tms.repository.SessionRepository;
+import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.TutorPayoutRepository;
-import com.example.tms.repository.UserRepository;
 import com.example.tms.security.RoleGuard;
 import org.springframework.stereotype.Service;
 
@@ -18,16 +22,19 @@ import java.util.UUID;
 @Service
 public class DashboardService {
     private final TutorPayoutRepository tutorPayoutRepository;
-    private final UserRepository userRepository;
+    private final TutorClassRepository tutorClassRepository;
+    private final SessionRepository sessionRepository;
     private final RoleGuard roleGuard;
 
     public DashboardService(
             TutorPayoutRepository tutorPayoutRepository,
-            UserRepository userRepository,
+            TutorClassRepository tutorClassRepository,
+            SessionRepository sessionRepository,
             RoleGuard roleGuard
     ) {
         this.tutorPayoutRepository = tutorPayoutRepository;
-        this.userRepository = userRepository;
+        this.tutorClassRepository = tutorClassRepository;
+        this.sessionRepository = sessionRepository;
         this.roleGuard = roleGuard;
     }
 
@@ -54,6 +61,14 @@ public class DashboardService {
                 .toList();
     }
 
+    public List<TutorClassOverviewResponse> tutorClassOverview(User tutor) {
+        roleGuard.requireRole(tutor, RoleName.TUTOR);
+        return tutorClassRepository.findByTutorId(tutor.getId())
+                .stream()
+                .map(this::toClassOverview)
+                .toList();
+    }
+
     private TutorSummaryResponse toSummary(TutorPayout payout) {
         return new TutorSummaryResponse(
                 payout.getTutor().getId(),
@@ -71,6 +86,20 @@ public class DashboardService {
                 payout.getGrossRevenue(),
                 payout.getNetSalary(),
                 payout.getStatus().name()
+        );
+    }
+
+    private TutorClassOverviewResponse toClassOverview(TutorClass tutorClass) {
+        long sessionCount = sessionRepository.countByTutorClassId(tutorClass.getId());
+        Session latestSession = sessionRepository.findTopByTutorClassIdOrderByDateDesc(tutorClass.getId()).orElse(null);
+        return new TutorClassOverviewResponse(
+                tutorClass.getId(),
+                tutorClass.getSubject().getName(),
+                tutorClass.getStatus().name(),
+                tutorClass.getPricePerHour(),
+                tutorClass.getDefaultSalaryRate(),
+                sessionCount,
+                latestSession == null ? null : latestSession.getDate()
         );
     }
 }

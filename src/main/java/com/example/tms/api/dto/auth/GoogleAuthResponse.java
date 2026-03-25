@@ -14,6 +14,7 @@ public record GoogleAuthResponse(
         String accessToken,
         String refreshToken,
         boolean isNewUser,  // true if account just created
-        boolean needsProfileCompletion  // true if user needs to complete profile (phone/facebook)
+        boolean needsProfileCompletion,  // true if user needs to complete profile (phone/facebook)
+        boolean needsTutorOnboarding
 ) {
 }

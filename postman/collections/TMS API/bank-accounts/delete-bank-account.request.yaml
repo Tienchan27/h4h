@@ -1,0 +1,26 @@
+$kind: http-request
+name: Delete Bank Account
+method: DELETE
+url: '{{baseUrl}}/bank-accounts/{{bankAccountId}}'
+order: 4000
+description: Delete a bank account
+auth:
+  type: bearer
+  credentials:
+    - key: token
+      value: '{{accessToken}}'
+pathVariables:
+  - key: bankAccountId
+    value: '{{bankAccountId}}'
+    description: Bank account UUID
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test("Status code is 200 or 204", function () {
+          pm.expect(pm.response.code).to.be.oneOf([200, 204]);
+      });
+
+      pm.test("Response time is under 2000ms", function () {
+          pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

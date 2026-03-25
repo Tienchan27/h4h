@@ -1,6 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { createSession, listSessionsByPayrollMonth, updateSessionFinancial } from '../../services/sessionService';
-import { CreateSessionRequest, SessionResponse } from '../../types/sessions';
+import {
+  createSession,
+  listMySessionClasses,
+  listSessionsByPayrollMonth,
+  updateSessionFinancial,
+} from '../../services/sessionService';
+import { CreateSessionRequest, SessionResponse, TutorSessionClassOptionResponse } from '../../types/sessions';
 import { extractApiErrorMessage } from '../../services/authService';
 
 function getCurrentMonth(): string {
@@ -8,9 +13,14 @@ function getCurrentMonth(): string {
   return `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}`;
 }
 
+function getTodayDate(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${`${now.getMonth() + 1}`.padStart(2, '0')}-${`${now.getDate()}`.padStart(2, '0')}`;
+}
+
 const initialForm: CreateSessionRequest = {
   classId: '',
-  date: '',
+  date: getTodayDate(),
   durationHours: 1,
   tuitionAtLog: 0,
   salaryRateAtLog: 0.75,
@@ -21,6 +31,7 @@ const initialForm: CreateSessionRequest = {
 function TutorSessionsPage() {
   const [month, setMonth] = useState<string>(getCurrentMonth());
   const [items, setItems] = useState<SessionResponse[]>([]);
+  const [classes, setClasses] = useState<TutorSessionClassOptionResponse[]>([]);
   const [form, setForm] = useState<CreateSessionRequest>(initialForm);
   const [reasonBySession, setReasonBySession] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(false);
@@ -40,7 +51,23 @@ function TutorSessionsPage() {
     }
   }
 
+  async function loadClasses(): Promise<void> {
+    try {
+      const response = await listMySessionClasses();
+      setClasses(response);
+      if (response.length > 0) {
+        setForm((prev) => ({
+          ...prev,
+          classId: prev.classId || response[0].id,
+        }));
+      }
+    } catch (err: unknown) {
+      setError(extractApiErrorMessage(err, 'Failed to load tutor classes'));
+    }
+  }
+
   useEffect(() => {
+    loadClasses();
     loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [month]);
@@ -52,7 +79,12 @@ function TutorSessionsPage() {
     try {
       await createSession(form);
       setSuccess('Session created successfully.');
-      setForm({ ...initialForm, payrollMonth: month });
+      setForm((prev) => ({
+        ...initialForm,
+        classId: prev.classId,
+        payrollMonth: month,
+        date: getTodayDate(),
+      }));
       await loadSessions();
     } catch (err: unknown) {
       setError(extractApiErrorMessage(err, 'Failed to create session'));
@@ -109,64 +141,97 @@ function TutorSessionsPage() {
 
       <div className="card">
         <h3 className="section-title">Create session</h3>
-        <form className="grid-form" onSubmit={handleCreate}>
-          <input
-            className="text-input"
-            placeholder="Class ID (UUID)"
-            value={form.classId}
-            onChange={(event) => setForm((prev) => ({ ...prev, classId: event.target.value }))}
-            required
-          />
-          <input
-            className="text-input"
-            type="date"
-            value={form.date}
-            onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-            required
-          />
-          <input
-            className="text-input"
-            type="number"
-            step="0.25"
-            placeholder="Duration hours"
-            value={form.durationHours}
-            onChange={(event) => setForm((prev) => ({ ...prev, durationHours: Number(event.target.value) }))}
-            required
-          />
-          <input
-            className="text-input"
-            type="number"
-            step="0.01"
-            placeholder="Tuition at log"
-            value={form.tuitionAtLog}
-            onChange={(event) => setForm((prev) => ({ ...prev, tuitionAtLog: Number(event.target.value) }))}
-            required
-          />
-          <input
-            className="text-input"
-            type="number"
-            step="0.01"
-            placeholder="Salary rate at log"
-            value={form.salaryRateAtLog}
-            onChange={(event) => setForm((prev) => ({ ...prev, salaryRateAtLog: Number(event.target.value) }))}
-            required
-          />
-          <input
-            className="text-input"
-            type="month"
-            value={form.payrollMonth}
-            onChange={(event) => setForm((prev) => ({ ...prev, payrollMonth: event.target.value }))}
-          />
-          <input
-            className="text-input"
-            placeholder="Note"
-            value={form.note}
-            onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-          />
-          <button type="submit" className="btn btn-primary compact-btn">
+        <form className="stack-16" onSubmit={handleCreate}>
+          <label className="input-wrapper">
+            <span className="input-label">Class</span>
+            <select
+              className="text-input"
+              value={form.classId}
+              onChange={(event) => setForm((prev) => ({ ...prev, classId: event.target.value }))}
+              required
+              disabled={!classes.length}
+            >
+              {!classes.length ? <option value="">No class assigned yet</option> : null}
+              {classes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.subjectName} - {item.pricePerHour.toLocaleString()} / hour
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="input-wrapper">
+            <span className="input-label">Session date</span>
+            <input
+              className="text-input"
+              type="date"
+              value={form.date}
+              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+              required
+            />
+          </label>
+
+          <label className="input-wrapper">
+            <span className="input-label">Duration hours</span>
+            <input
+              className="text-input"
+              type="number"
+              step="0.25"
+              value={form.durationHours}
+              onChange={(event) => setForm((prev) => ({ ...prev, durationHours: Number(event.target.value) }))}
+              required
+            />
+          </label>
+
+          <label className="input-wrapper">
+            <span className="input-label">Tuition at log</span>
+            <input
+              className="text-input"
+              type="number"
+              step="0.01"
+              value={form.tuitionAtLog}
+              onChange={(event) => setForm((prev) => ({ ...prev, tuitionAtLog: Number(event.target.value) }))}
+              required
+            />
+          </label>
+
+          <label className="input-wrapper">
+            <span className="input-label">Salary rate at log (0 - 1)</span>
+            <input
+              className="text-input"
+              type="number"
+              step="0.01"
+              value={form.salaryRateAtLog}
+              onChange={(event) => setForm((prev) => ({ ...prev, salaryRateAtLog: Number(event.target.value) }))}
+              required
+            />
+          </label>
+
+          <label className="input-wrapper">
+            <span className="input-label">Payroll month</span>
+            <input
+              className="text-input"
+              type="month"
+              value={form.payrollMonth}
+              onChange={(event) => setForm((prev) => ({ ...prev, payrollMonth: event.target.value }))}
+            />
+          </label>
+
+          <label className="input-wrapper">
+            <span className="input-label">Note</span>
+            <input
+              className="text-input"
+              placeholder="Optional note"
+              value={form.note}
+              onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+            />
+          </label>
+
+          <button type="submit" className="btn btn-primary compact-btn" disabled={!classes.length}>
             Create Session
           </button>
         </form>
+        {!classes.length ? <p className="muted">You need at least one assigned class before creating a session.</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
         {success ? <p className="success-text">{success}</p> : null}
       </div>

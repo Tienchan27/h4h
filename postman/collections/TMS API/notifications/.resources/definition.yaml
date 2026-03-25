@@ -1,0 +1,4 @@
+$kind: collection
+name: Notifications
+description: Notification management endpoints
+order: 7000
