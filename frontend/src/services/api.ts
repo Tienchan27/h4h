@@ -1,14 +1,26 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { clearAuthSession, getAccessToken, getRefreshToken, setNeedsTutorOnboarding } from '../utils/storage';
+import {
+  clearAuthSession,
+  getAccessToken,
+  getRefreshToken,
+  saveAuthSession,
+} from '../utils/storage';
+import { AppRole } from '../types/app';
 
 interface RetryRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
 interface RefreshTokenResponse {
+  userId: string;
+  email: string;
+  name: string;
   accessToken: string;
   refreshToken: string;
+  needsProfileCompletion: boolean;
   needsTutorOnboarding: boolean;
+  roles: AppRole[];
+  activeRole: AppRole;
 }
 
 const api = axios.create({
@@ -74,12 +86,20 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
         const response = await axios.post<RefreshTokenResponse>(`${api.defaults.baseURL}/auth/refresh`, { refreshToken });
-        const { accessToken, refreshToken: rotatedRefreshToken, needsTutorOnboarding } = response.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', rotatedRefreshToken);
-        setNeedsTutorOnboarding(!!needsTutorOnboarding);
+        const refreshPayload = response.data;
+        saveAuthSession({
+          userId: refreshPayload.userId,
+          email: refreshPayload.email,
+          name: refreshPayload.name,
+          accessToken: refreshPayload.accessToken,
+          refreshToken: refreshPayload.refreshToken,
+          needsProfileCompletion: !!refreshPayload.needsProfileCompletion,
+          needsTutorOnboarding: !!refreshPayload.needsTutorOnboarding,
+          roles: refreshPayload.roles,
+          activeRole: refreshPayload.activeRole,
+        });
         originalRequest.headers = originalRequest.headers || {};
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${refreshPayload.accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
         clearAuthSession();

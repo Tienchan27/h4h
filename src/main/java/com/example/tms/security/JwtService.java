@@ -19,6 +19,7 @@ import java.util.UUID;
 public class JwtService {
     private final SecretKey key;
     private static final String TOKEN_TYPE_CLAIM = "type";
+    private static final String ACTIVE_ROLE_CLAIM = "activeRole";
     private static final String ACCESS_TOKEN_TYPE = "access";
     private static final String REFRESH_TOKEN_TYPE = "refresh";
     private static final long ACCESS_TOKEN_TTL_SECONDS = 3600L;
@@ -28,11 +29,12 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    public String generateAccessToken(UUID userId, String email) {
+    public String generateAccessToken(UUID userId, String email, String activeRole) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
+                .claim(ACTIVE_ROLE_CLAIM, activeRole)
                 .claim(TOKEN_TYPE_CLAIM, ACCESS_TOKEN_TYPE)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(ACCESS_TOKEN_TTL_SECONDS)))
@@ -40,11 +42,12 @@ public class JwtService {
                 .compact();
     }
 
-    public String generateRefreshToken(UUID userId, String email) {
+    public String generateRefreshToken(UUID userId, String email, String activeRole) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
+                .claim(ACTIVE_ROLE_CLAIM, activeRole)
                 .claim(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE)
                 // Ensure each refresh token is unique even for back-to-back issuance.
                 .id(UUID.randomUUID().toString())
@@ -96,5 +99,10 @@ public class JwtService {
     public String extractEmail(String token) {
         Claims claims = validateToken(token);
         return claims.get("email", String.class);
+    }
+
+    public String extractActiveRole(String token) {
+        Claims claims = validateToken(token);
+        return claims.get(ACTIVE_ROLE_CLAIM, String.class);
     }
 }

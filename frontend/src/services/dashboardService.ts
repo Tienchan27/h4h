@@ -1,5 +1,6 @@
 import api from './api';
 import {
+  AdminTutorDetailResponse,
   InviteTutorRequest,
   InviteTutorResponse,
   TutorClassOverviewResponse,
@@ -14,8 +15,8 @@ export async function getAdminTutorSummary(month: string): Promise<TutorSummaryR
   return response.data;
 }
 
-export async function getAdminTutorDetail(tutorId: string, month: string): Promise<TutorDashboardResponse> {
-  const response = await api.get<TutorDashboardResponse>('/dashboard/admin/tutors/detail', {
+export async function getAdminTutorDetail(tutorId: string, month: string): Promise<AdminTutorDetailResponse> {
+  const response = await api.get<AdminTutorDetailResponse>('/dashboard/admin/tutors/detail', {
     params: { tutorId, month },
   });
   return response.data;

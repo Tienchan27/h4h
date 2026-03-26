@@ -5,11 +5,14 @@ import { extractApiErrorMessage, verifyOtp } from '../../services/authService';
 
 interface OTPVerificationProps {
   email: string;
+  title?: string;
+  submitLabel?: string;
+  onVerify?: (otp: string) => Promise<void>;
   onSuccess?: () => void;
   onError?: (message: string) => void;
 }
 
-function OTPVerification({ email, onSuccess, onError }: OTPVerificationProps) {
+function OTPVerification({ email, title, submitLabel, onVerify, onSuccess, onError }: OTPVerificationProps) {
   const [otp, setOtp] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -17,7 +20,11 @@ function OTPVerification({ email, onSuccess, onError }: OTPVerificationProps) {
     event.preventDefault();
     setLoading(true);
     try {
-      await verifyOtp({ email, otp });
+      if (onVerify) {
+        await onVerify(otp);
+      } else {
+        await verifyOtp({ email, otp });
+      }
       onSuccess?.();
     } catch (error: unknown) {
       onError?.(extractApiErrorMessage(error, 'OTP verification failed'));
@@ -28,6 +35,7 @@ function OTPVerification({ email, onSuccess, onError }: OTPVerificationProps) {
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
+      {title ? <h3 className="section-title">{title}</h3> : null}
       <p className="otp-hint">Enter the OTP sent to: {email}</p>
       <Input
         label="One-Time Password"
@@ -37,7 +45,7 @@ function OTPVerification({ email, onSuccess, onError }: OTPVerificationProps) {
         required
       />
       <Button type="submit" loading={loading}>
-        Verify OTP
+        {submitLabel || 'Verify OTP'}
       </Button>
     </form>
   );

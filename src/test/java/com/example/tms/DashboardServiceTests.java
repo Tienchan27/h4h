@@ -8,8 +8,11 @@ import com.example.tms.entity.User;
 import com.example.tms.entity.enums.ClassStatus;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.repository.SessionRepository;
+import com.example.tms.repository.TutorBankAccountRepository;
 import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.TutorPayoutRepository;
+import com.example.tms.repository.UserRepository;
+import com.example.tms.repository.UserRoleRepository;
 import com.example.tms.security.RoleGuard;
 import com.example.tms.service.DashboardService;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +40,12 @@ class DashboardServiceTests {
     @Mock
     private SessionRepository sessionRepository;
     @Mock
+    private TutorBankAccountRepository tutorBankAccountRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Mock
+    private UserRoleRepository userRoleRepository;
+    @Mock
     private RoleGuard roleGuard;
 
     private DashboardService dashboardService;
@@ -46,7 +55,10 @@ class DashboardServiceTests {
         dashboardService = new DashboardService(
                 tutorPayoutRepository,
                 tutorClassRepository,
+                tutorBankAccountRepository,
                 sessionRepository,
+                userRepository,
+                userRoleRepository,
                 roleGuard
         );
     }

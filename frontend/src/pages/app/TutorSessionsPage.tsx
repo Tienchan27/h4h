@@ -33,6 +33,7 @@ function TutorSessionsPage() {
   const [items, setItems] = useState<SessionResponse[]>([]);
   const [classes, setClasses] = useState<TutorSessionClassOptionResponse[]>([]);
   const [form, setForm] = useState<CreateSessionRequest>(initialForm);
+  const [salaryRatePercent, setSalaryRatePercent] = useState<number>(75);
   const [reasonBySession, setReasonBySession] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -55,12 +56,6 @@ function TutorSessionsPage() {
     try {
       const response = await listMySessionClasses();
       setClasses(response);
-      if (response.length > 0) {
-        setForm((prev) => ({
-          ...prev,
-          classId: prev.classId || response[0].id,
-        }));
-      }
     } catch (err: unknown) {
       setError(extractApiErrorMessage(err, 'Failed to load tutor classes'));
     }
@@ -77,14 +72,17 @@ function TutorSessionsPage() {
     setError('');
     setSuccess('');
     try {
-      await createSession(form);
+      await createSession({
+        ...form,
+        salaryRateAtLog: Number((salaryRatePercent / 100).toFixed(4)),
+      });
       setSuccess('Session created successfully.');
       setForm((prev) => ({
         ...initialForm,
-        classId: prev.classId,
         payrollMonth: month,
         date: getTodayDate(),
       }));
+      setSalaryRatePercent(75);
       await loadSessions();
     } catch (err: unknown) {
       setError(extractApiErrorMessage(err, 'Failed to create session'));
@@ -141,8 +139,8 @@ function TutorSessionsPage() {
 
       <div className="card">
         <h3 className="section-title">Create session</h3>
-        <form className="stack-16" onSubmit={handleCreate}>
-          <label className="input-wrapper">
+        <form className="session-create-row" onSubmit={handleCreate}>
+          <label className="input-wrapper session-create-field">
             <span className="input-label">Class</span>
             <select
               className="text-input"
@@ -151,85 +149,91 @@ function TutorSessionsPage() {
               required
               disabled={!classes.length}
             >
-              {!classes.length ? <option value="">No class assigned yet</option> : null}
+              <option value="">Select class</option>
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.subjectName} - {item.pricePerHour.toLocaleString()} / hour
+                  {item.className}
                 </option>
               ))}
             </select>
           </label>
 
-          <label className="input-wrapper">
-            <span className="input-label">Session date</span>
-            <input
-              className="text-input"
-              type="date"
-              value={form.date}
-              onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-              required
-            />
-          </label>
+          {form.classId ? (
+            <>
+              <label className="input-wrapper session-create-field">
+                <span className="input-label">Date</span>
+                <input
+                  className="text-input"
+                  type="date"
+                  value={form.date}
+                  onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
+                  required
+                />
+              </label>
 
-          <label className="input-wrapper">
-            <span className="input-label">Duration hours</span>
-            <input
-              className="text-input"
-              type="number"
-              step="0.25"
-              value={form.durationHours}
-              onChange={(event) => setForm((prev) => ({ ...prev, durationHours: Number(event.target.value) }))}
-              required
-            />
-          </label>
+              <label className="input-wrapper session-create-field">
+                <span className="input-label">Duration (hours)</span>
+                <input
+                  className="text-input"
+                  type="number"
+                  step="0.25"
+                  value={form.durationHours}
+                  onChange={(event) => setForm((prev) => ({ ...prev, durationHours: Number(event.target.value) }))}
+                  required
+                />
+              </label>
 
-          <label className="input-wrapper">
-            <span className="input-label">Tuition at log</span>
-            <input
-              className="text-input"
-              type="number"
-              step="0.01"
-              value={form.tuitionAtLog}
-              onChange={(event) => setForm((prev) => ({ ...prev, tuitionAtLog: Number(event.target.value) }))}
-              required
-            />
-          </label>
+              <label className="input-wrapper session-create-field">
+                <span className="input-label">Tuition</span>
+                <input
+                  className="text-input"
+                  type="number"
+                  step="0.01"
+                  value={form.tuitionAtLog}
+                  onChange={(event) => setForm((prev) => ({ ...prev, tuitionAtLog: Number(event.target.value) }))}
+                  required
+                />
+              </label>
 
-          <label className="input-wrapper">
-            <span className="input-label">Salary rate at log (0 - 1)</span>
-            <input
-              className="text-input"
-              type="number"
-              step="0.01"
-              value={form.salaryRateAtLog}
-              onChange={(event) => setForm((prev) => ({ ...prev, salaryRateAtLog: Number(event.target.value) }))}
-              required
-            />
-          </label>
+              <label className="input-wrapper session-create-field">
+                <span className="input-label">Salary rate (%)</span>
+                <input
+                  className="text-input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={salaryRatePercent}
+                  onChange={(event) => setSalaryRatePercent(Number(event.target.value))}
+                  required
+                />
+              </label>
 
-          <label className="input-wrapper">
-            <span className="input-label">Payroll month</span>
-            <input
-              className="text-input"
-              type="month"
-              value={form.payrollMonth}
-              onChange={(event) => setForm((prev) => ({ ...prev, payrollMonth: event.target.value }))}
-            />
-          </label>
+              <label className="input-wrapper session-create-field">
+                <span className="input-label">Payroll month</span>
+                <input
+                  className="text-input"
+                  type="month"
+                  value={form.payrollMonth}
+                  onChange={(event) => setForm((prev) => ({ ...prev, payrollMonth: event.target.value }))}
+                />
+              </label>
 
-          <label className="input-wrapper">
-            <span className="input-label">Note</span>
-            <input
-              className="text-input"
-              placeholder="Optional note"
-              value={form.note}
-              onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
-            />
-          </label>
+              <label className="input-wrapper session-create-field">
+                <span className="input-label">Note</span>
+                <input
+                  className="text-input"
+                  placeholder="Optional note"
+                  value={form.note}
+                  onChange={(event) => setForm((prev) => ({ ...prev, note: event.target.value }))}
+                />
+              </label>
 
-          <button type="submit" className="btn btn-primary compact-btn" disabled={!classes.length}>
-            Create Session
-          </button>
+              <button type="submit" className="btn btn-primary compact-btn">
+                Create Session
+              </button>
+            </>
+          ) : null}
         </form>
         {!classes.length ? <p className="muted">You need at least one assigned class before creating a session.</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
@@ -249,7 +253,7 @@ function TutorSessionsPage() {
                   <th>Class ID</th>
                   <th>Duration</th>
                   <th>Tuition</th>
-                  <th>Rate</th>
+                  <th>Rate (%)</th>
                   <th>Reason</th>
                   <th></th>
                 </tr>
@@ -282,8 +286,10 @@ function TutorSessionsPage() {
                         className="table-input"
                         type="number"
                         step="0.01"
-                        value={item.salaryRateAtLog}
-                        onChange={(event) => updateSessionRow(item.id, 'salaryRateAtLog', Number(event.target.value))}
+                        value={(item.salaryRateAtLog * 100).toFixed(2)}
+                        onChange={(event) =>
+                          updateSessionRow(item.id, 'salaryRateAtLog', Number(event.target.value) / 100)
+                        }
                       />
                     </td>
                     <td>

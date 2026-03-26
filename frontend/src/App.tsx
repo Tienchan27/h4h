@@ -10,12 +10,14 @@ import { useRoleAccess } from './hooks/useRoleAccess';
 import AppHomeRedirect from './pages/app/AppHomeRedirect';
 import UnauthorizedPage from './pages/app/UnauthorizedPage';
 import NotFoundPage from './pages/app/NotFoundPage';
-import AdminDashboardPage from './pages/app/AdminDashboardPage';
+import AdminTutorManagementPage from './pages/app/AdminTutorManagementPage';
+import AdminClassAssignmentPage from './pages/app/AdminClassAssignmentPage';
 import AdminBankVerificationPage from './pages/app/AdminBankVerificationPage';
 import AdminPayoutsPage from './pages/app/AdminPayoutsPage';
 import TutorDashboardPage from './pages/app/TutorDashboardPage';
 import TutorSessionsPage from './pages/app/TutorSessionsPage';
 import TutorBankAccountsPage from './pages/app/TutorBankAccountsPage';
+import TutorClassMarketplacePage from './pages/app/TutorClassMarketplacePage';
 import NotificationsPage from './pages/app/NotificationsPage';
 import AccountPage from './pages/app/AccountPage';
 import PlaceholderPage from './pages/app/PlaceholderPage';
@@ -125,7 +127,23 @@ function App() {
           path="admin/dashboard"
           element={
             <RoleGate allowed={['ADMIN']}>
-              <AdminDashboardPage />
+              <Navigate to="/app/admin/tutors" replace />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="admin/tutors"
+          element={
+            <RoleGate allowed={['ADMIN']}>
+              <AdminTutorManagementPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="admin/class-assignment"
+          element={
+            <RoleGate allowed={['ADMIN']}>
+              <AdminClassAssignmentPage />
             </RoleGate>
           }
         />
@@ -166,6 +184,14 @@ function App() {
           element={
             <RoleGate allowed={['TUTOR']}>
               <TutorBankAccountsPage />
+            </RoleGate>
+          }
+        />
+        <Route
+          path="tutor/available-classes"
+          element={
+            <RoleGate allowed={['TUTOR']}>
+              <TutorClassMarketplacePage />
             </RoleGate>
           }
         />

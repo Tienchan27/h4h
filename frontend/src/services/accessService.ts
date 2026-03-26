@@ -1,23 +1,10 @@
-import { AxiosError } from 'axios';
 import { AppRole } from '../types/app';
-import { getAdminTutorSummary, getTutorDashboard } from './dashboardService';
 import { getAuthUser } from '../utils/storage';
 
 const ROLE_CACHE_PREFIX = 'appRoleCache:';
 
 interface RoleCachePayload {
   roles: AppRole[];
-}
-
-function currentYearMonth(): string {
-  const now = new Date();
-  const month = `${now.getMonth() + 1}`.padStart(2, '0');
-  return `${now.getFullYear()}-${month}`;
-}
-
-function isDenied(error: unknown): boolean {
-  const status = (error as AxiosError)?.response?.status;
-  return status === 401 || status === 403 || status === 404;
 }
 
 function isValidRoleArray(value: unknown): value is AppRole[] {
@@ -89,31 +76,8 @@ export async function resolveRolesByApi(): Promise<AppRole[]> {
   if (cachedRoles?.length) {
     return cachedRoles;
   }
-  const month = currentYearMonth();
-
-  try {
-    await getAdminTutorSummary(month);
-    const roles: AppRole[] = ['ADMIN'];
-    writeRoleCache(roles);
-    return roles;
-  } catch (error: unknown) {
-    if (!isDenied(error)) {
-      // Ignore unexpected errors and continue fallback role probing.
-    }
-  }
-
-  try {
-    await getTutorDashboard();
-    const roles: AppRole[] = ['TUTOR'];
-    writeRoleCache(roles);
-    return roles;
-  } catch (error: unknown) {
-    if (!isDenied(error)) {
-      // Ignore unexpected errors and continue fallback role probing.
-    }
-  }
-
-  const roles: AppRole[] = ['STUDENT'];
+  const user = getAuthUser();
+  const roles: AppRole[] = user?.roles?.length ? user.roles : ['STUDENT'];
   writeRoleCache(roles);
   return roles;
 }

@@ -13,6 +13,7 @@ export interface ProfileResponse {
 }
 
 export interface UpdateProfileRequest {
+  name?: string | null;
   phoneNumber?: string | null;
   facebookUrl?: string | null;
   parentPhone?: string | null;

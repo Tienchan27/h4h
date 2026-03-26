@@ -41,4 +41,17 @@ public class MailService {
             throw new ApiException("Failed to deliver invitation email. Please try again later.");
         }
     }
+
+    public void sendStudentInvitationEmail(String to) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject("Student invitation from Tutor Management System");
+            message.setText("You have been added to a class. Please sign in with Google or register this email to access your student workspace.");
+            mailSender.send(message);
+        } catch (Exception ex) {
+            log.error("Student invitation email sending failed for {}: {}", to, ex.getMessage(), ex);
+            throw new ApiException("Failed to deliver invitation email. Please try again later.");
+        }
+    }
 }

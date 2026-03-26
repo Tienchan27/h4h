@@ -11,9 +11,11 @@ export interface SessionClassRef {
 
 export interface TutorSessionClassOptionResponse {
   id: string;
+  className: string;
   subjectName: string;
   pricePerHour: number;
   defaultSalaryRate: number;
+  studentNames: string[];
 }
 
 export interface SessionResponse {

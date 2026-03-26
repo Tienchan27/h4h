@@ -1,12 +1,13 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
 import Button from '../ui/Button';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
 import api from '../../services/api';
-import { markProfileCompleted } from '../../utils/storage';
-import { normalizeProfilePayload, NormalizedProfilePayload, requirePhoneOrFacebook } from '../../utils/validation';
+import { clearAuthSession, markProfileCompleted, setAuthUserName } from '../../utils/storage';
+import { normalizeProfilePayload, requirePhoneOrFacebook } from '../../utils/validation';
 import { ApiErrorResponse, AuthUser } from '../../types/auth';
+import { ProfileResponse } from '../../types/profile';
 
 interface ProfileCompletionProps {
   user: AuthUser | null;
@@ -15,6 +16,7 @@ interface ProfileCompletionProps {
 }
 
 interface ProfileFormState {
+  name: string;
   phoneNumber: string;
   facebookUrl: string;
   parentPhone: string;
@@ -34,16 +36,52 @@ function extractApiErrorMessage(error: unknown): string {
 
 function ProfileCompletion({ user, onCompleted, onError }: ProfileCompletionProps) {
   const [form, setForm] = useState<ProfileFormState>({
+    name: user?.name || '',
     phoneNumber: '',
     facebookUrl: '',
     parentPhone: '',
     address: '',
   });
   const [loading, setLoading] = useState<boolean>(false);
+  const [bootstrapping, setBootstrapping] = useState<boolean>(true);
 
   function updateField<K extends keyof ProfileFormState>(name: K, value: ProfileFormState[K]): void {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
+
+  useEffect(() => {
+    let mounted = true;
+    async function bootstrap(): Promise<void> {
+      try {
+        const response = await api.get<ProfileResponse>('/users/me/profile');
+        if (!mounted) return;
+        setForm((prev) => ({
+          ...prev,
+          name: response.data.name || prev.name,
+          phoneNumber: response.data.phoneNumber || '',
+          facebookUrl: response.data.facebookUrl || '',
+          parentPhone: response.data.parentPhone || '',
+          address: response.data.address || '',
+        }));
+      } catch (error: unknown) {
+        const status = (error as AxiosError<ApiErrorResponse>)?.response?.status;
+        if (status === 401 || status === 403) {
+          clearAuthSession();
+          onError?.('Session expired. Please login with Google again.');
+          window.location.href = '/';
+          return;
+        }
+      } finally {
+        if (mounted) {
+          setBootstrapping(false);
+        }
+      }
+    }
+    bootstrap();
+    return () => {
+      mounted = false;
+    };
+  }, [onError]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -54,7 +92,8 @@ function ProfileCompletion({ user, onCompleted, onError }: ProfileCompletionProp
 
     setLoading(true);
     try {
-      await api.patch<NormalizedProfilePayload>('/users/me/profile', normalizeProfilePayload(form));
+      const response = await api.patch<ProfileResponse>('/users/me/profile', normalizeProfilePayload(form));
+      setAuthUserName(response.data.name);
       markProfileCompleted();
       onCompleted?.();
     } catch (error: unknown) {
@@ -68,8 +107,15 @@ function ProfileCompletion({ user, onCompleted, onError }: ProfileCompletionProp
     <Card featured>
       <h2 className="title title-lg">Complete Profile</h2>
       <p className="subtitle">Welcome {user?.name || 'user'}, complete your profile to continue.</p>
+      {bootstrapping ? <p className="muted">Loading profile...</p> : null}
       <form className="auth-form" onSubmit={handleSubmit}>
         <Input label="Email (from Google)" value={user?.email || ''} disabled />
+        <Input
+          label="Name"
+          value={form.name}
+          onChange={(e) => updateField('name', e.target.value)}
+          required
+        />
         <Input
           label="Phone Number"
           value={form.phoneNumber}
@@ -86,7 +132,7 @@ function ProfileCompletion({ user, onCompleted, onError }: ProfileCompletionProp
           onChange={(e) => updateField('parentPhone', e.target.value)}
         />
         <Input label="Address (optional)" value={form.address} onChange={(e) => updateField('address', e.target.value)} />
-        <Button type="submit" loading={loading}>
+        <Button type="submit" loading={loading} disabled={bootstrapping}>
           Save Profile
         </Button>
       </form>

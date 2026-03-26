@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { getMyProfile, updateMyProfile } from '../../services/profileService';
 import { ProfileResponse, UpdateProfileRequest } from '../../types/profile';
 import { extractApiErrorMessage } from '../../services/authService';
+import { setAuthUserName } from '../../utils/storage';
 
 function AccountPage() {
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
@@ -17,6 +18,7 @@ function AccountPage() {
       const response = await getMyProfile();
       setProfile(response);
       setForm({
+        name: response.name || '',
         phoneNumber: response.phoneNumber || '',
         facebookUrl: response.facebookUrl || '',
         parentPhone: response.parentPhone || '',
@@ -39,12 +41,14 @@ function AccountPage() {
     setSuccess('');
     try {
       const response = await updateMyProfile({
+        name: form.name || null,
         phoneNumber: form.phoneNumber || null,
         facebookUrl: form.facebookUrl || null,
         parentPhone: form.parentPhone || null,
         address: form.address || null,
       });
       setProfile(response);
+      setAuthUserName(response.name);
       setSuccess('Profile updated successfully.');
     } catch (err: unknown) {
       setError(extractApiErrorMessage(err, 'Failed to update profile'));
@@ -69,6 +73,12 @@ function AccountPage() {
               <p><strong>Status:</strong> {profile.status}</p>
             </div>
             <form onSubmit={handleSubmit} className="grid-form">
+              <input
+                className="text-input"
+                placeholder="Name"
+                value={form.name || ''}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+              />
               <input
                 className="text-input"
                 placeholder="Phone number"

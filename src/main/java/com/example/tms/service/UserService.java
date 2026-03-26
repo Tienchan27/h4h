@@ -29,6 +29,10 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ApiException("User not found"));
 
+        if (request.name() != null && !request.name().isBlank()) {
+            user.setName(request.name().trim());
+        }
+
         // Update contact fields
         user.setPhoneNumber(request.phoneNumber());
         user.setFacebookUrl(request.facebookUrl());

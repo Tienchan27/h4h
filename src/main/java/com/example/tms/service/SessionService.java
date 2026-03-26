@@ -6,14 +6,17 @@ import com.example.tms.api.dto.session.UpdateSessionFinancialRequest;
 import com.example.tms.entity.Session;
 import com.example.tms.entity.SessionFinancialEditAudit;
 import com.example.tms.entity.TutorClass;
+import com.example.tms.entity.Enrollment;
 import com.example.tms.entity.User;
 import com.example.tms.entity.UserRole;
+import com.example.tms.entity.enums.EnrollmentStatus;
 import com.example.tms.entity.enums.NotificationType;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.entity.enums.UserRoleStatus;
 import com.example.tms.exception.ApiException;
 import com.example.tms.repository.SessionFinancialEditAuditRepository;
 import com.example.tms.repository.SessionRepository;
+import com.example.tms.repository.EnrollmentRepository;
 import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.UserRoleRepository;
 import com.example.tms.security.RoleGuard;
@@ -28,6 +31,7 @@ import java.util.UUID;
 public class SessionService {
     private final SessionRepository sessionRepository;
     private final TutorClassRepository tutorClassRepository;
+    private final EnrollmentRepository enrollmentRepository;
     private final UserRoleRepository userRoleRepository;
     private final SessionFinancialEditAuditRepository auditRepository;
     private final NotificationService notificationService;
@@ -36,6 +40,7 @@ public class SessionService {
     public SessionService(
             SessionRepository sessionRepository,
             TutorClassRepository tutorClassRepository,
+            EnrollmentRepository enrollmentRepository,
             UserRoleRepository userRoleRepository,
             SessionFinancialEditAuditRepository auditRepository,
             NotificationService notificationService,
@@ -43,6 +48,7 @@ public class SessionService {
     ) {
         this.sessionRepository = sessionRepository;
         this.tutorClassRepository = tutorClassRepository;
+        this.enrollmentRepository = enrollmentRepository;
         this.userRoleRepository = userRoleRepository;
         this.auditRepository = auditRepository;
         this.notificationService = notificationService;
@@ -122,13 +128,30 @@ public class SessionService {
         roleGuard.requireRole(tutor, RoleName.TUTOR);
         return tutorClassRepository.findByTutorId(tutor.getId())
                 .stream()
-                .map(tutorClass -> new TutorSessionClassOptionResponse(
-                        tutorClass.getId(),
-                        tutorClass.getSubject().getName(),
-                        tutorClass.getPricePerHour(),
-                        tutorClass.getDefaultSalaryRate()
-                ))
+                .map(this::toClassOptionResponse)
                 .toList();
+    }
+
+    private TutorSessionClassOptionResponse toClassOptionResponse(TutorClass tutorClass) {
+        List<String> studentNames = enrollmentRepository.findByTutorClassIdAndStatus(tutorClass.getId(), EnrollmentStatus.ACTIVE)
+                .stream()
+                .map(Enrollment::getStudent)
+                .map(User::getName)
+                .toList();
+        String className = tutorClass.getDisplayName();
+        if (className == null || className.isBlank()) {
+            className = studentNames.isEmpty()
+                    ? "[" + tutorClass.getSubject().getName() + "] Class"
+                    : "[" + tutorClass.getSubject().getName() + "] " + String.join(" - ", studentNames);
+        }
+        return new TutorSessionClassOptionResponse(
+                tutorClass.getId(),
+                className,
+                tutorClass.getSubject().getName(),
+                tutorClass.getPricePerHour(),
+                tutorClass.getDefaultSalaryRate(),
+                studentNames
+        );
     }
 
     private void auditIfChanged(Session session, User tutor, String fieldName, String oldValue, String newValue, String reason) {

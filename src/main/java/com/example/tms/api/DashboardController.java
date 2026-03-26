@@ -1,5 +1,6 @@
 package com.example.tms.api;
 
+import com.example.tms.api.dto.dashboard.AdminTutorDetailResponse;
 import com.example.tms.api.dto.dashboard.TutorDashboardResponse;
 import com.example.tms.api.dto.dashboard.TutorClassOverviewResponse;
 import com.example.tms.api.dto.dashboard.TutorSummaryResponse;
@@ -31,7 +32,7 @@ public class DashboardController {
     }
 
     @GetMapping("/admin/tutors/detail")
-    public TutorDashboardResponse adminTutorDetail(@RequestParam UUID tutorId, @RequestParam String month) {
+    public AdminTutorDetailResponse adminTutorDetail(@RequestParam UUID tutorId, @RequestParam String month) {
         return dashboardService.adminTutorDetail(currentUserResolver.requireUser(), tutorId, YearMonth.parse(month));
     }
 

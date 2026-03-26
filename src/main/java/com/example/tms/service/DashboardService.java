@@ -1,20 +1,30 @@
 package com.example.tms.service;
 
+import com.example.tms.api.dto.dashboard.AdminTutorBankAccountResponse;
+import com.example.tms.api.dto.dashboard.AdminTutorDetailResponse;
+import com.example.tms.api.dto.dashboard.AdminTutorPayoutSnapshotResponse;
 import com.example.tms.api.dto.dashboard.TutorDashboardResponse;
 import com.example.tms.api.dto.dashboard.TutorClassOverviewResponse;
 import com.example.tms.api.dto.dashboard.TutorSummaryResponse;
 import com.example.tms.entity.Session;
+import com.example.tms.entity.TutorBankAccount;
 import com.example.tms.entity.TutorClass;
 import com.example.tms.entity.TutorPayout;
 import com.example.tms.entity.User;
+import com.example.tms.entity.UserRole;
 import com.example.tms.entity.enums.RoleName;
+import com.example.tms.entity.enums.UserRoleStatus;
 import com.example.tms.exception.ApiException;
 import com.example.tms.repository.SessionRepository;
+import com.example.tms.repository.TutorBankAccountRepository;
 import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.TutorPayoutRepository;
+import com.example.tms.repository.UserRepository;
+import com.example.tms.repository.UserRoleRepository;
 import com.example.tms.security.RoleGuard;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -23,34 +33,72 @@ import java.util.UUID;
 public class DashboardService {
     private final TutorPayoutRepository tutorPayoutRepository;
     private final TutorClassRepository tutorClassRepository;
+    private final TutorBankAccountRepository tutorBankAccountRepository;
     private final SessionRepository sessionRepository;
+    private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final RoleGuard roleGuard;
 
     public DashboardService(
             TutorPayoutRepository tutorPayoutRepository,
             TutorClassRepository tutorClassRepository,
+            TutorBankAccountRepository tutorBankAccountRepository,
             SessionRepository sessionRepository,
+            UserRepository userRepository,
+            UserRoleRepository userRoleRepository,
             RoleGuard roleGuard
     ) {
         this.tutorPayoutRepository = tutorPayoutRepository;
         this.tutorClassRepository = tutorClassRepository;
+        this.tutorBankAccountRepository = tutorBankAccountRepository;
         this.sessionRepository = sessionRepository;
+        this.userRepository = userRepository;
+        this.userRoleRepository = userRoleRepository;
         this.roleGuard = roleGuard;
     }
 
     public List<TutorSummaryResponse> adminTutorSummary(User admin, YearMonth month) {
         roleGuard.requireRole(admin, RoleName.ADMIN);
-        return tutorPayoutRepository.findByYearAndMonth(month.getYear(), month.getMonthValue())
-                .stream()
-                .map(this::toSummary)
+        List<UserRole> tutorRoles = userRoleRepository.findByRoleAndStatus(RoleName.TUTOR, UserRoleStatus.ACTIVE);
+        return tutorRoles.stream()
+                .map(UserRole::getUser)
+                .map(tutor -> toSummary(tutor, month))
                 .toList();
     }
 
-    public TutorDashboardResponse adminTutorDetail(User admin, UUID tutorId, YearMonth month) {
+    public AdminTutorDetailResponse adminTutorDetail(User admin, UUID tutorId, YearMonth month) {
         roleGuard.requireRole(admin, RoleName.ADMIN);
+        User tutor = userRepository.findById(tutorId)
+                .orElseThrow(() -> new ApiException("Tutor not found"));
+
         TutorPayout payout = tutorPayoutRepository.findByTutorIdAndYearAndMonth(tutorId, month.getYear(), month.getMonthValue())
-                .orElseThrow(() -> new ApiException("Payout not found"));
-        return toDashboard(payout);
+                .orElse(null);
+        List<AdminTutorBankAccountResponse> bankAccounts = tutorBankAccountRepository.findByUserIdOrderByIsPrimaryDescCreatedAtDesc(tutorId)
+                .stream()
+                .map(this::toBankAccountResponse)
+                .toList();
+        List<TutorClassOverviewResponse> managedClasses = tutorClassRepository.findByTutorId(tutorId)
+                .stream()
+                .map(this::toClassOverview)
+                .toList();
+
+        return new AdminTutorDetailResponse(
+                tutor.getId(),
+                tutor.getName(),
+                tutor.getEmail(),
+                tutor.getPhoneNumber(),
+                tutor.getFacebookUrl(),
+                tutor.getAddress(),
+                payout == null ? null : new AdminTutorPayoutSnapshotResponse(
+                        payout.getYear(),
+                        payout.getMonth(),
+                        payout.getGrossRevenue(),
+                        payout.getNetSalary(),
+                        payout.getStatus().name()
+                ),
+                bankAccounts,
+                managedClasses
+        );
     }
 
     public List<TutorDashboardResponse> tutorSelf(User tutor) {
@@ -69,13 +117,16 @@ public class DashboardService {
                 .toList();
     }
 
-    private TutorSummaryResponse toSummary(TutorPayout payout) {
+    private TutorSummaryResponse toSummary(User tutor, YearMonth month) {
+        TutorPayout payout = tutorPayoutRepository.findByTutorIdAndYearAndMonth(tutor.getId(), month.getYear(), month.getMonthValue())
+                .orElse(null);
         return new TutorSummaryResponse(
-                payout.getTutor().getId(),
-                payout.getTutor().getEmail(),
-                payout.getGrossRevenue(),
-                payout.getNetSalary(),
-                payout.getStatus().name()
+                tutor.getId(),
+                tutor.getName(),
+                tutor.getEmail(),
+                payout == null ? BigDecimal.ZERO : payout.getGrossRevenue(),
+                payout == null ? BigDecimal.ZERO : payout.getNetSalary(),
+                payout == null ? "NO_PAYOUT" : payout.getStatus().name()
         );
     }
 
@@ -100,6 +151,18 @@ public class DashboardService {
                 tutorClass.getDefaultSalaryRate(),
                 sessionCount,
                 latestSession == null ? null : latestSession.getDate()
+        );
+    }
+
+    private AdminTutorBankAccountResponse toBankAccountResponse(TutorBankAccount bankAccount) {
+        return new AdminTutorBankAccountResponse(
+                bankAccount.getId(),
+                bankAccount.getBankName(),
+                bankAccount.getMaskedAccountNumber(),
+                bankAccount.getAccountHolderName(),
+                bankAccount.isPrimary(),
+                bankAccount.isVerified(),
+                bankAccount.getVerifiedAt()
         );
     }
 }

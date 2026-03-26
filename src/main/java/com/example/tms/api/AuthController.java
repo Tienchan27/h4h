@@ -6,6 +6,8 @@ import com.example.tms.api.dto.auth.GoogleAuthResponse;
 import com.example.tms.api.dto.auth.LinkGoogleRequest;
 import com.example.tms.api.dto.auth.LoginRequest;
 import com.example.tms.api.dto.auth.RegisterRequest;
+import com.example.tms.api.dto.auth.SwitchRoleRequest;
+import com.example.tms.api.dto.auth.VerifyGoogleLinkOtpRequest;
 import com.example.tms.api.dto.auth.VerifyOtpRequest;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.AuthService;
@@ -70,6 +72,19 @@ public class AuthController {
     @PostMapping("/google")
     public GoogleAuthResponse googleLogin(@Valid @RequestBody GoogleAuthRequest request, HttpServletRequest httpRequest) {
         return authService.googleLogin(request, httpRequest);
+    }
+
+    @PostMapping("/google/verify-link-otp")
+    public GoogleAuthResponse verifyGoogleLinkOtp(
+            @Valid @RequestBody VerifyGoogleLinkOtpRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        return authService.verifyGoogleLinkOtp(request, httpRequest);
+    }
+
+    @PostMapping("/switch-role")
+    public AuthResponse switchRole(@Valid @RequestBody SwitchRoleRequest request, HttpServletRequest httpRequest) {
+        return authService.switchRole(currentUserResolver.requireUserId(), request.activeRole(), httpRequest);
     }
 
     @PostMapping("/google/link")

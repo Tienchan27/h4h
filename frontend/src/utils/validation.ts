@@ -1,4 +1,5 @@
 interface ProfileFormInput {
+  name: string;
   phoneNumber: string;
   facebookUrl: string;
   parentPhone: string;
@@ -6,6 +7,7 @@ interface ProfileFormInput {
 }
 
 export interface NormalizedProfilePayload {
+  name: string | null;
   phoneNumber: string | null;
   facebookUrl: string | null;
   parentPhone: string | null;
@@ -42,6 +44,7 @@ function normalizeFacebookUrl(value: string): string | null {
 
 export function normalizeProfilePayload(form: ProfileFormInput): NormalizedProfilePayload {
   return {
+    name: form.name?.trim() || null,
     phoneNumber: normalizePhoneValue(form.phoneNumber),
     facebookUrl: normalizeFacebookUrl(form.facebookUrl),
     parentPhone: normalizePhoneValue(form.parentPhone),

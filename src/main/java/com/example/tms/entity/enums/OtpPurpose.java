@@ -1,5 +1,6 @@
 package com.example.tms.entity.enums;
 
 public enum OtpPurpose {
-    REGISTER
+    REGISTER,
+    GOOGLE_LINK
 }

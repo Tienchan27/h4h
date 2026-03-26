@@ -21,7 +21,10 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof candidate.name === 'string' &&
     (typeof candidate.picture === 'string' || candidate.picture === null) &&
     typeof candidate.needsProfileCompletion === 'boolean' &&
-    typeof candidate.needsTutorOnboarding === 'boolean'
+    typeof candidate.needsTutorOnboarding === 'boolean' &&
+    Array.isArray(candidate.roles) &&
+    candidate.roles.every((role) => role === 'ADMIN' || role === 'TUTOR' || role === 'STUDENT') &&
+    (candidate.activeRole === 'ADMIN' || candidate.activeRole === 'TUTOR' || candidate.activeRole === 'STUDENT')
   );
 }
 
@@ -37,6 +40,8 @@ export function saveAuthSession(payload: AuthSessionPayload): void {
       picture: payload.picture || null,
       needsProfileCompletion: !!payload.needsProfileCompletion,
       needsTutorOnboarding: !!payload.needsTutorOnboarding,
+      roles: payload.roles || ['STUDENT'],
+      activeRole: payload.activeRole || ((payload.roles?.[0] as AuthUser['activeRole']) || 'STUDENT'),
     })
   );
 }
@@ -92,5 +97,21 @@ export function setNeedsTutorOnboarding(needsTutorOnboarding: boolean): void {
   const user = getAuthUser();
   if (!user) return;
   user.needsTutorOnboarding = !!needsTutorOnboarding;
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+
+export function setAuthUserName(name: string): void {
+  const user = getAuthUser();
+  if (!user) return;
+  const normalizedName = name?.trim();
+  if (!normalizedName) return;
+  user.name = normalizedName;
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+
+export function setAuthUserActiveRole(activeRole: AuthUser['activeRole']): void {
+  const user = getAuthUser();
+  if (!user) return;
+  user.activeRole = activeRole;
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
 }

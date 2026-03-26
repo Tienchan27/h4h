@@ -42,7 +42,7 @@ public class TutorClass {
     private Subject subject;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tutor_id", nullable = false)
+    @JoinColumn(name = "tutor_id")
     private User tutor;
 
     @Column(name = "price_per_hour", nullable = false, precision = 10, scale = 2)
@@ -54,6 +54,12 @@ public class TutorClass {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private ClassStatus status = ClassStatus.ACTIVE;
+
+    @Column(name = "display_name", length = 255)
+    private String displayName;
+
+    @Column(name = "note", columnDefinition = "TEXT")
+    private String note;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

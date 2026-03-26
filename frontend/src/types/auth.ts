@@ -1,3 +1,5 @@
+import { AppRole } from './app';
+
 export interface AuthUser {
   userId: string;
   email: string;
@@ -5,6 +7,8 @@ export interface AuthUser {
   picture: string | null;
   needsProfileCompletion: boolean;
   needsTutorOnboarding: boolean;
+  roles: AppRole[];
+  activeRole: AppRole;
 }
 
 export interface AuthSessionPayload {
@@ -16,6 +20,8 @@ export interface AuthSessionPayload {
   picture?: string | null;
   needsProfileCompletion?: boolean;
   needsTutorOnboarding?: boolean;
+  roles?: AppRole[];
+  activeRole?: AppRole;
   isNewUser?: boolean;
 }
 
@@ -38,9 +44,26 @@ export interface VerifyOtpPayload {
 export interface AuthTokensResponse {
   userId: string;
   email: string;
+  name: string;
   accessToken: string;
   refreshToken: string;
+  needsProfileCompletion: boolean;
   needsTutorOnboarding: boolean;
+  roles: AppRole[];
+  activeRole: AppRole;
+}
+
+export interface GoogleAuthResponse extends AuthTokensResponse {
+  picture?: string | null;
+  isNewUser?: boolean;
+  authStatus?: 'AUTHENTICATED' | 'PENDING_LINK_OTP';
+  challengeEmail?: string | null;
+}
+
+export interface VerifyGoogleLinkOtpPayload {
+  email: string;
+  idToken: string;
+  otp: string;
 }
 
 export interface UserProfile {

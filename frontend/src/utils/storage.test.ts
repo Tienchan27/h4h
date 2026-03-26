@@ -14,9 +14,13 @@ describe('storage tutor onboarding flag', () => {
       refreshToken: 'refresh',
       needsProfileCompletion: false,
       needsTutorOnboarding: true,
+      roles: ['ADMIN', 'TUTOR'],
+      activeRole: 'ADMIN',
     });
 
     expect(getAuthUser()?.needsTutorOnboarding).toBe(true);
+    expect(getAuthUser()?.activeRole).toBe('ADMIN');
+    expect(getAuthUser()?.roles).toEqual(['ADMIN', 'TUTOR']);
 
     setNeedsTutorOnboarding(false);
     expect(getAuthUser()?.needsTutorOnboarding).toBe(false);

@@ -7,9 +7,10 @@ import LoginForm from '../components/auth/LoginForm';
 import RegisterForm from '../components/auth/RegisterForm';
 import OTPVerification from '../components/auth/OTPVerification';
 import GoogleSignInButton from '../components/auth/GoogleSignInButton';
-import { getAuthUser, isAuthenticated } from '../utils/storage';
+import { getAuthUser, isAuthenticated, saveAuthSession } from '../utils/storage';
 import { googleLogin } from '../services/googleAuth';
 import { ApiErrorResponse } from '../types/auth';
+import { verifyGoogleLinkOtp } from '../services/authService';
 
 type AuthTab = 'login' | 'register';
 
@@ -17,6 +18,7 @@ function LandingPage() {
   const [tab, setTab] = useState<AuthTab>('login');
   const [error, setError] = useState<string>('');
   const [otpEmail, setOtpEmail] = useState<string>('');
+  const [googleLinkChallenge, setGoogleLinkChallenge] = useState<{ email: string; idToken: string } | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -42,7 +44,14 @@ function LandingPage() {
   async function handleGoogleLogin(idToken: string): Promise<void> {
     try {
       setError('');
-      await googleLogin(idToken);
+      const response = await googleLogin(idToken);
+      if (response.authStatus === 'PENDING_LINK_OTP') {
+        setGoogleLinkChallenge({
+          email: response.challengeEmail || response.email,
+          idToken,
+        });
+        return;
+      }
       routeByProfileFlag();
     } catch (err: unknown) {
       const message =
@@ -85,6 +94,23 @@ function LandingPage() {
 
           {otpEmail ? (
             <OTPVerification email={otpEmail} onSuccess={routeByProfileFlag} onError={setError} />
+          ) : googleLinkChallenge ? (
+            <OTPVerification
+              email={googleLinkChallenge.email}
+              title="Verify Google Link"
+              submitLabel="Verify and Link Google"
+              onVerify={async (otp: string) => {
+                const response = await verifyGoogleLinkOtp({
+                  email: googleLinkChallenge.email,
+                  idToken: googleLinkChallenge.idToken,
+                  otp,
+                });
+                saveAuthSession(response);
+                setGoogleLinkChallenge(null);
+              }}
+              onSuccess={routeByProfileFlag}
+              onError={setError}
+            />
           ) : tab === 'login' ? (
             <LoginForm onSuccess={routeByProfileFlag} onError={setError} />
           ) : (

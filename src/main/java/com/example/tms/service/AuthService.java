@@ -3,10 +3,11 @@ package com.example.tms.service;
 import com.example.tms.api.dto.auth.AuthResponse;
 import com.example.tms.api.dto.auth.GoogleAuthRequest;
 import com.example.tms.api.dto.auth.GoogleAuthResponse;
-import com.example.tms.api.dto.auth.LinkGoogleRequest;
 import com.example.tms.api.dto.auth.LoginRequest;
 import com.example.tms.api.dto.auth.RegisterRequest;
+import com.example.tms.api.dto.auth.VerifyGoogleLinkOtpRequest;
 import com.example.tms.api.dto.auth.VerifyOtpRequest;
+import com.example.tms.entity.UserRole;
 import com.example.tms.entity.OtpVerification;
 import com.example.tms.entity.RefreshToken;
 import com.example.tms.entity.User;
@@ -36,6 +37,8 @@ import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -43,12 +46,14 @@ import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class AuthService {
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final OtpVerificationRepository otpVerificationRepository;
@@ -65,6 +70,8 @@ public class AuthService {
     private static final int OTP_EXPIRY_MINUTES = 5;
     private static final int OTP_MAX_ATTEMPTS = 5;
     private static final int OTP_RESEND_COOLDOWN_SECONDS = 60;
+    private static final String GOOGLE_AUTH_STATUS_AUTHENTICATED = "AUTHENTICATED";
+    private static final String GOOGLE_AUTH_STATUS_PENDING_LINK_OTP = "PENDING_LINK_OTP";
 
     public AuthService(
             UserRepository userRepository,
@@ -97,7 +104,18 @@ public class AuthService {
     @Transactional
     public void register(RegisterRequest request) {
         String normalizedEmail = normalizeEmail(request.email());
-        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+        User existingUser = userRepository.findByEmail(normalizedEmail).orElse(null);
+        if (existingUser != null) {
+            if (existingUser.getStatus() == UserStatus.PENDING_VERIFICATION
+                    && (existingUser.getPassword() == null || existingUser.getPassword().isBlank())) {
+                existingUser.setName(sanitizeName(request.name()));
+                existingUser.setPassword(passwordEncoder.encode(request.password()));
+                userRepository.save(existingUser);
+                userRoleService.ensureActiveRole(existingUser, RoleName.STUDENT, existingUser);
+                tutorInvitationService.acceptPendingInvitation(existingUser);
+                issueOtp(normalizedEmail, OtpPurpose.REGISTER, false);
+                return;
+            }
             throw new ApiException("Email already exists");
         }
         User user = new User();
@@ -112,7 +130,7 @@ public class AuthService {
         }
         userRoleService.ensureActiveRole(user, RoleName.STUDENT, user);
         tutorInvitationService.acceptPendingInvitation(user);
-        issueOtp(normalizedEmail);
+        issueOtp(normalizedEmail, OtpPurpose.REGISTER, false);
     }
 
     @Transactional
@@ -127,20 +145,7 @@ public class AuthService {
             return;
         }
 
-        // Check for recent OTP to prevent spam
-        otpVerificationRepository.findTopByEmailAndPurposeAndStatusOrderByCreatedAtDesc(
-                normalizedEmail,
-                OtpPurpose.REGISTER,
-                OtpStatus.ACTIVE
-        ).ifPresent(recentOtp -> {
-            LocalDateTime cooldownEnd = recentOtp.getCreatedAt().plusSeconds(OTP_RESEND_COOLDOWN_SECONDS);
-            if (LocalDateTime.now().isBefore(cooldownEnd)) {
-                long secondsLeft = java.time.Duration.between(LocalDateTime.now(), cooldownEnd).getSeconds();
-                throw new ApiException("Please wait " + secondsLeft + " seconds before requesting a new OTP");
-            }
-        });
-
-        issueOtp(normalizedEmail);
+        issueOtp(normalizedEmail, OtpPurpose.REGISTER, true);
     }
 
     @Transactional
@@ -221,6 +226,7 @@ public class AuthService {
         }
 
         User user = refreshToken.getUser();
+        RoleName requestedRole = parseRoleName(jwtService.extractActiveRole(refreshTokenValue));
 
         // Revoke the old refresh token (token rotation)
         refreshToken.setRevoked(true);
@@ -228,7 +234,7 @@ public class AuthService {
         refreshTokenRepository.saveAndFlush(refreshToken);
 
         // Generate new tokens
-        return generateAuthResponse(user, httpRequest);
+        return generateAuthResponse(user, httpRequest, requestedRole);
     }
 
     @Transactional
@@ -238,12 +244,37 @@ public class AuthService {
         refreshTokenRepository.revokeAllByUser(user, LocalDateTime.now());
     }
 
-    private void issueOtp(String email) {
+    @Transactional
+    public AuthResponse switchRole(UUID userId, RoleName activeRole, HttpServletRequest httpRequest) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException("User not found"));
+        roleOrThrow(user, activeRole);
+        log.info("User {} switched active role to {}", user.getId(), activeRole);
+        return generateAuthResponse(user, httpRequest, activeRole);
+    }
+
+    private void issueOtp(String email, OtpPurpose purpose, boolean strictCooldown) {
+        Optional<OtpVerification> recentOtp = otpVerificationRepository.findTopByEmailAndPurposeAndStatusOrderByCreatedAtDesc(
+                email,
+                purpose,
+                OtpStatus.ACTIVE
+        );
+        if (recentOtp.isPresent()) {
+            LocalDateTime cooldownEnd = recentOtp.get().getCreatedAt().plusSeconds(OTP_RESEND_COOLDOWN_SECONDS);
+            if (LocalDateTime.now().isBefore(cooldownEnd)) {
+                if (strictCooldown) {
+                    long secondsLeft = java.time.Duration.between(LocalDateTime.now(), cooldownEnd).getSeconds();
+                    throw new ApiException("Please wait " + secondsLeft + " seconds before requesting a new OTP");
+                }
+                return;
+            }
+        }
+
         String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
         OtpVerification verification = new OtpVerification();
         verification.setEmail(email);
         verification.setOtpHash(hashOtp(otp));
-        verification.setPurpose(OtpPurpose.REGISTER);
+        verification.setPurpose(purpose);
         verification.setStatus(OtpStatus.ACTIVE);
         verification.setAttemptCount(0);
         verification.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES));
@@ -252,8 +283,17 @@ public class AuthService {
     }
 
     private AuthResponse generateAuthResponse(User user, HttpServletRequest httpRequest) {
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
-        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail());
+        return generateAuthResponse(user, httpRequest, null);
+    }
+
+    private AuthResponse generateAuthResponse(User user, HttpServletRequest httpRequest, RoleName requestedRole) {
+        List<RoleName> roles = getActiveRoles(user);
+        if (roles.isEmpty()) {
+            roles = List.of(RoleName.STUDENT);
+        }
+        RoleName activeRole = requestedRole == null ? resolveDefaultActiveRole(roles) : roleOrThrow(user, requestedRole);
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), activeRole.name());
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), activeRole.name());
 
         // Store refresh token in database
         RefreshToken token = new RefreshToken();
@@ -267,9 +307,13 @@ public class AuthService {
         return new AuthResponse(
                 user.getId(),
                 user.getEmail(),
+                user.getName(),
                 accessToken,
                 refreshToken,
-                needsTutorOnboarding(user)
+                needsProfileCompletion(user),
+                needsTutorOnboarding(user),
+                roles,
+                activeRole
         );
     }
 
@@ -324,22 +368,59 @@ public class AuthService {
             if (user.getStatus() != UserStatus.ACTIVE) {
                 throw new ApiException("Account not active");
             }
-            return generateGoogleAuthResponse(user, picture, false, httpRequest);
+            return generateGoogleAuthResponse(user, picture, false, httpRequest, null);
         }
 
         Optional<User> existingUserOptional = userRepository.findByEmail(email);
         if (existingUserOptional.isPresent()) {
             User existingUser = existingUserOptional.get();
             if (existingUser.getPassword() != null && !existingUser.getPassword().isBlank()) {
-                throw new ApiException("EMAIL_CONFLICT");
+                issueOtp(email, OtpPurpose.GOOGLE_LINK, false);
+                log.info("Google link OTP challenge issued for email {}", email);
+                return pendingGoogleOtpChallengeResponse(existingUser, picture, name);
+            }
+            if (existingUser.getStatus() != UserStatus.ACTIVE) {
+                existingUser.setStatus(UserStatus.ACTIVE);
+                existingUser = userRepository.save(existingUser);
             }
             createProviderLink(existingUser, googleUserId);
-            return generateGoogleAuthResponse(existingUser, picture, false, httpRequest);
+            return generateGoogleAuthResponse(existingUser, picture, false, httpRequest, null);
         }
 
         User oauthUser = createOAuthUser(name, email);
         createProviderLink(oauthUser, googleUserId);
-        return generateGoogleAuthResponse(oauthUser, picture, true, httpRequest);
+        return generateGoogleAuthResponse(oauthUser, picture, true, httpRequest, null);
+    }
+
+    @Transactional
+    public GoogleAuthResponse verifyGoogleLinkOtp(VerifyGoogleLinkOtpRequest request, HttpServletRequest httpRequest) {
+        GoogleIdToken.Payload payload = verifyGoogleToken(request.idToken());
+        String email = normalizeEmail(payload.getEmail());
+        String requestEmail = normalizeEmail(request.email());
+        if (!email.equals(requestEmail)) {
+            throw new ApiException("Google account email does not match OTP email");
+        }
+        String googleUserId = payload.getSubject();
+        String picture = Optional.ofNullable(payload.get("picture")).map(Object::toString).orElse(null);
+
+        OtpVerification otp = otpVerificationRepository
+                .findTopByEmailAndPurposeAndStatusOrderByCreatedAtDesc(email, OtpPurpose.GOOGLE_LINK, OtpStatus.ACTIVE)
+                .orElseThrow(() -> new ApiException("Invalid or expired OTP"));
+        verifyOtpOrThrow(otp, request.otp());
+
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new ApiException("User not found"));
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            throw new ApiException("Password login is not configured for this account");
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            user.setStatus(UserStatus.ACTIVE);
+            user = userRepository.save(user);
+        }
+        if (!userProviderRepository.existsByProviderAndProviderId(ProviderType.GOOGLE, googleUserId)) {
+            createProviderLink(user, googleUserId);
+        }
+        log.info("Google provider linked after OTP challenge for user {}", user.getId());
+        return generateGoogleAuthResponse(user, picture, false, httpRequest, null);
     }
 
     @Transactional
@@ -418,9 +499,10 @@ public class AuthService {
             User user,
             String picture,
             boolean isNewUser,
-            HttpServletRequest httpRequest
+            HttpServletRequest httpRequest,
+            RoleName requestedRole
     ) {
-        AuthResponse authResponse = generateAuthResponse(user, httpRequest);
+        AuthResponse authResponse = generateAuthResponse(user, httpRequest, requestedRole);
         return new GoogleAuthResponse(
                 user.getId(),
                 user.getEmail(),
@@ -430,7 +512,30 @@ public class AuthService {
                 authResponse.refreshToken(),
                 isNewUser,
                 needsProfileCompletion(user),
-                authResponse.needsTutorOnboarding()
+                authResponse.needsTutorOnboarding(),
+                authResponse.roles(),
+                authResponse.activeRole(),
+                GOOGLE_AUTH_STATUS_AUTHENTICATED,
+                null
+        );
+    }
+
+    private GoogleAuthResponse pendingGoogleOtpChallengeResponse(User user, String picture, String fallbackName) {
+        List<RoleName> roles = getActiveRoles(user);
+        return new GoogleAuthResponse(
+                user.getId(),
+                user.getEmail(),
+                user.getName() == null || user.getName().isBlank() ? fallbackName : user.getName(),
+                picture,
+                null,
+                null,
+                false,
+                needsProfileCompletion(user),
+                needsTutorOnboarding(user),
+                roles,
+                null,
+                GOOGLE_AUTH_STATUS_PENDING_LINK_OTP,
+                user.getEmail()
         );
     }
 
@@ -477,6 +582,69 @@ public class AuthService {
             return false;
         }
         return tutorBankAccountRepository.countByUserId(user.getId()) == 0;
+    }
+
+    private List<RoleName> getActiveRoles(User user) {
+        return userRoleRepository.findByUserIdAndStatus(user.getId(), UserRoleStatus.ACTIVE)
+                .stream()
+                .map(UserRole::getRole)
+                .map(role -> role.getName())
+                .distinct()
+                .toList();
+    }
+
+    private RoleName resolveDefaultActiveRole(List<RoleName> roles) {
+        if (roles.contains(RoleName.ADMIN)) {
+            return RoleName.ADMIN;
+        }
+        if (roles.contains(RoleName.TUTOR)) {
+            return RoleName.TUTOR;
+        }
+        return RoleName.STUDENT;
+    }
+
+    private RoleName roleOrThrow(User user, RoleName roleName) {
+        boolean hasRole = userRoleRepository.hasRole(user.getId(), roleName, UserRoleStatus.ACTIVE);
+        if (!hasRole) {
+            throw new ApiException("Forbidden for role " + roleName);
+        }
+        return roleName;
+    }
+
+    private RoleName parseRoleName(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return RoleName.valueOf(value);
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
+    }
+
+    private void verifyOtpOrThrow(OtpVerification otp, String rawOtp) {
+        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
+            otp.setStatus(OtpStatus.EXPIRED);
+            otpVerificationRepository.save(otp);
+            throw new ApiException("Invalid or expired OTP");
+        }
+        if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
+            otp.setStatus(OtpStatus.EXPIRED);
+            otpVerificationRepository.save(otp);
+            throw new ApiException("Too many attempts");
+        }
+
+        String hash = hashOtp(rawOtp);
+        if (!hash.equals(otp.getOtpHash())) {
+            otp.setAttemptCount(otp.getAttemptCount() + 1);
+            if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
+                otp.setStatus(OtpStatus.EXPIRED);
+            }
+            otpVerificationRepository.save(otp);
+            throw new ApiException("Invalid or expired OTP");
+        }
+        otp.setStatus(OtpStatus.VERIFIED);
+        otpVerificationRepository.save(otp);
     }
 
     private boolean isEmailVerified(Object emailVerifiedClaim) {

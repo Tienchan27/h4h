@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/resend-otp").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/google").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/google/verify-link-otp").permitAll()
                         .requestMatchers("/actuator/health/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/google/link").authenticated()
                         // Protected user endpoints - all authenticated users
