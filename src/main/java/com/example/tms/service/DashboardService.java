@@ -28,6 +28,7 @@ import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.TutorPayoutRepository;
 import com.example.tms.repository.UserRepository;
 import com.example.tms.repository.UserRoleRepository;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +69,7 @@ public class DashboardService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @Cacheable(cacheNames = "dashboard:admin:summary", key = "'adminSummary:' + #admin.id + ':' + #month")
     public List<TutorSummaryResponse> adminTutorSummary(User admin, YearMonth month) {
         List<UserRole> tutorRoles = userRoleRepository.findByRoleAndStatus(RoleName.TUTOR, UserRoleStatus.ACTIVE);
         return tutorRoles.stream()
@@ -77,6 +79,7 @@ public class DashboardService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
+    @Cacheable(cacheNames = "dashboard:admin:detail", key = "'adminDetail:' + #admin.id + ':' + #tutorId + ':' + #month")
     public AdminTutorDetailResponse adminTutorDetail(User admin, UUID tutorId, YearMonth month) {
         User tutor = userRepository.findById(tutorId)
                 .orElseThrow(() -> new ApiException("Tutor not found"));
@@ -113,6 +116,7 @@ public class DashboardService {
     }
 
     @PreAuthorize("hasRole('TUTOR')")
+    @Cacheable(cacheNames = "dashboard:tutor:me", key = "'tutorMe:' + #tutor.id")
     public List<TutorDashboardResponse> tutorSelf(User tutor) {
         return tutorPayoutRepository.findByTutorIdOrderByYearDescMonthDesc(tutor.getId())
                 .stream()
@@ -121,6 +125,7 @@ public class DashboardService {
     }
 
     @PreAuthorize("hasRole('TUTOR')")
+    @Cacheable(cacheNames = "dashboard:tutor:classes", key = "'tutorClasses:' + #tutor.id")
     public List<TutorClassOverviewResponse> tutorClassOverview(User tutor) {
         return tutorClassRepository.findByTutorId(tutor.getId())
                 .stream()
@@ -130,6 +135,7 @@ public class DashboardService {
 
     @PreAuthorize("hasRole('TUTOR')")
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "dashboard:tutor:roster", key = "'tutorRoster:' + #tutor.id + ':' + #classId")
     public TutorClassRosterResponse tutorClassRoster(User tutor, UUID classId) {
         TutorClass tutorClass = tutorClassRepository.findById(classId)
                 .orElseThrow(() -> new ApiException("Class not found"));
