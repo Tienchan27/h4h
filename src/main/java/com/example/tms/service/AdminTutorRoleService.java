@@ -26,14 +26,14 @@ public class AdminTutorRoleService {
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void revokeTutorRole(User admin, UUID tutorId, String reason) {
-        // Validate tutor exists (and fail fast with a clear message)
+        // Validate tutor exists
         userRepository.findById(tutorId)
                 .orElseThrow(() -> new ApiException("Tutor not found"));
 
         UserRole userRole = userRoleRepository.findByUserIdAndRole(tutorId, RoleName.TUTOR)
                 .orElseThrow(() -> new ApiException("Tutor role not found"));
 
-        // Revoke only role, do not hard delete user account
+        // Revoke only role
         userRole.setStatus(UserRoleStatus.REVOKED);
         userRole.setRevokedReason(reason);
         userRole.setUpdatedBy(admin);

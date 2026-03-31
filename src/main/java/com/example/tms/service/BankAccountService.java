@@ -39,7 +39,6 @@ public class BankAccountService {
         account.setAccountNumber(request.accountNumber());
         account.setAccountHolderName(request.accountHolderName());
         account.setPrimary(!hasPrimary); // First account is primary, others are not
-        // Soft-transition: tutors no longer require admin verification.
         account.setVerified(true);
         account.setVerifiedAt(LocalDateTime.now());
 

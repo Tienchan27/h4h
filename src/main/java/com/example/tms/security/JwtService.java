@@ -22,8 +22,8 @@ public class JwtService {
     private static final String ACTIVE_ROLE_CLAIM = "activeRole";
     private static final String ACCESS_TOKEN_TYPE = "access";
     private static final String REFRESH_TOKEN_TYPE = "refresh";
-    private static final long ACCESS_TOKEN_TTL_SECONDS = 3600L;
-    private static final long REFRESH_TOKEN_TTL_SECONDS = 604800L;
+    private static final long ACCESS_TOKEN_TTL_SECONDS = 900L; //15 minutes
+    private static final long REFRESH_TOKEN_TTL_SECONDS = 2592000L; //30 days
 
     public JwtService(@Value("${app.security.jwt-secret}") String secret) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

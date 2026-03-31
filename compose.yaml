@@ -28,6 +28,8 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_started
+      redis:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -38,6 +40,8 @@ services:
       SERVER_PORT: ${SERVER_PORT:-8081}
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     networks:
       - tms-network
     restart: unless-stopped
@@ -88,6 +92,15 @@ services:
       - "8025:8025"
     expose:
       - "1025"
+    networks:
+      - tms-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    expose:
+      - "6379"
     networks:
       - tms-network
 

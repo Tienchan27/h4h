@@ -8,18 +8,15 @@ import com.example.tms.api.dto.auth.RegisterRequest;
 import com.example.tms.api.dto.auth.VerifyGoogleLinkOtpRequest;
 import com.example.tms.api.dto.auth.VerifyOtpRequest;
 import com.example.tms.entity.UserRole;
-import com.example.tms.entity.OtpVerification;
 import com.example.tms.entity.RefreshToken;
 import com.example.tms.entity.User;
 import com.example.tms.entity.UserProvider;
 import com.example.tms.entity.enums.OtpPurpose;
-import com.example.tms.entity.enums.OtpStatus;
 import com.example.tms.entity.enums.ProviderType;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.entity.enums.UserRoleStatus;
 import com.example.tms.entity.enums.UserStatus;
 import com.example.tms.exception.ApiException;
-import com.example.tms.repository.OtpVerificationRepository;
 import com.example.tms.repository.RefreshTokenRepository;
 import com.example.tms.repository.TutorBankAccountRepository;
 import com.example.tms.repository.UserProviderRepository;
@@ -56,8 +53,9 @@ public class AuthService {
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
-    private final OtpVerificationRepository otpVerificationRepository;
+    private final OtpRedisService otpRedisService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRedisService refreshTokenRedisService;
     private final TutorBankAccountRepository tutorBankAccountRepository;
     private final UserProviderRepository userProviderRepository;
     private final PasswordEncoder passwordEncoder;
@@ -76,8 +74,9 @@ public class AuthService {
     public AuthService(
             UserRepository userRepository,
             UserRoleRepository userRoleRepository,
-            OtpVerificationRepository otpVerificationRepository,
+            OtpRedisService otpRedisService,
             RefreshTokenRepository refreshTokenRepository,
+            RefreshTokenRedisService refreshTokenRedisService,
             TutorBankAccountRepository tutorBankAccountRepository,
             UserProviderRepository userProviderRepository,
             PasswordEncoder passwordEncoder,
@@ -89,8 +88,9 @@ public class AuthService {
     ) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
-        this.otpVerificationRepository = otpVerificationRepository;
+        this.otpRedisService = otpRedisService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenRedisService = refreshTokenRedisService;
         this.tutorBankAccountRepository = tutorBankAccountRepository;
         this.userProviderRepository = userProviderRepository;
         this.passwordEncoder = passwordEncoder;
@@ -151,36 +151,7 @@ public class AuthService {
     @Transactional
     public AuthResponse verifyOtp(VerifyOtpRequest request, HttpServletRequest httpRequest) {
         String normalizedEmail = normalizeEmail(request.email());
-        OtpVerification otp = otpVerificationRepository
-                .findTopByEmailAndPurposeAndStatusOrderByCreatedAtDesc(
-                        normalizedEmail,
-                        OtpPurpose.REGISTER,
-                        OtpStatus.ACTIVE
-                )
-                .orElseThrow(() -> new ApiException("Invalid or expired OTP"));
-
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
-            otp.setStatus(OtpStatus.EXPIRED);
-            otpVerificationRepository.save(otp);
-            throw new ApiException("Invalid or expired OTP");
-        }
-        if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
-            otp.setStatus(OtpStatus.EXPIRED);
-            otpVerificationRepository.save(otp);
-            throw new ApiException("Too many attempts");
-        }
-
-        String hash = hashOtp(request.otp());
-        if (!hash.equals(otp.getOtpHash())) {
-            otp.setAttemptCount(otp.getAttemptCount() + 1);
-            if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
-                otp.setStatus(OtpStatus.EXPIRED);
-            }
-            otpVerificationRepository.save(otp);
-            throw new ApiException("Invalid or expired OTP");
-        }
-        otp.setStatus(OtpStatus.VERIFIED);
-        otpVerificationRepository.save(otp);
+        verifyOtpOrThrow(normalizedEmail, OtpPurpose.REGISTER, request.otp());
 
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new ApiException("User not found"));
@@ -212,6 +183,9 @@ public class AuthService {
 
         // Hash and check if token exists in database
         String tokenHash = hashToken(refreshTokenValue);
+        if (refreshTokenRedisService.isBlacklisted(tokenHash)) {
+            throw new ApiException("Invalid refresh token");
+        }
         RefreshToken refreshToken = refreshTokenRepository.findByTokenHashAndRevokedFalseForUpdate(tokenHash)
                 .orElseThrow(() -> new ApiException("Invalid refresh token"));
 
@@ -232,6 +206,11 @@ public class AuthService {
         refreshToken.setRevoked(true);
         refreshToken.setRevokedAt(LocalDateTime.now());
         refreshTokenRepository.saveAndFlush(refreshToken);
+
+        java.time.Duration ttl = java.time.Duration.between(LocalDateTime.now(), refreshToken.getExpiresAt());
+        if (!ttl.isNegative() && !ttl.isZero()) {
+            refreshTokenRedisService.blacklist(tokenHash, ttl);
+        }
 
         // Generate new tokens
         return generateAuthResponse(user, httpRequest, requestedRole);
@@ -254,32 +233,30 @@ public class AuthService {
     }
 
     private void issueOtp(String email, OtpPurpose purpose, boolean strictCooldown) {
-        Optional<OtpVerification> recentOtp = otpVerificationRepository.findTopByEmailAndPurposeAndStatusOrderByCreatedAtDesc(
-                email,
-                purpose,
-                OtpStatus.ACTIVE
+        String normalizedEmail = normalizeEmail(email);
+        String purposeKey = purpose.name();
+
+        long sendCount = otpRedisService.incrementSendCount(
+                normalizedEmail,
+                purposeKey,
+                java.time.Duration.ofSeconds(OTP_RESEND_COOLDOWN_SECONDS)
         );
-        if (recentOtp.isPresent()) {
-            LocalDateTime cooldownEnd = recentOtp.get().getCreatedAt().plusSeconds(OTP_RESEND_COOLDOWN_SECONDS);
-            if (LocalDateTime.now().isBefore(cooldownEnd)) {
-                if (strictCooldown) {
-                    long secondsLeft = java.time.Duration.between(LocalDateTime.now(), cooldownEnd).getSeconds();
-                    throw new ApiException("Please wait " + secondsLeft + " seconds before requesting a new OTP");
-                }
-                return;
+        if (sendCount > 1) {
+            if (strictCooldown) {
+                throw new ApiException("Please wait before requesting a new OTP");
             }
+            return;
         }
 
         String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
-        OtpVerification verification = new OtpVerification();
-        verification.setEmail(email);
-        verification.setOtpHash(hashOtp(otp));
-        verification.setPurpose(purpose);
-        verification.setStatus(OtpStatus.ACTIVE);
-        verification.setAttemptCount(0);
-        verification.setExpiresAt(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES));
-        otpVerificationRepository.save(verification);
-        mailService.sendOtpEmail(email, otp);
+        String otpHash = hashOtp(otp);
+        otpRedisService.storeOtp(
+                normalizedEmail,
+                purposeKey,
+                otpHash,
+                java.time.Duration.ofMinutes(OTP_EXPIRY_MINUTES)
+        );
+        mailService.sendOtpEmail(normalizedEmail, otp);
     }
 
     private AuthResponse generateAuthResponse(User user, HttpServletRequest httpRequest) {
@@ -356,8 +333,6 @@ public class AuthService {
                 googleUserId
         );
 
-        // Historical data may contain orphan provider rows (provider record exists but user row was removed).
-        // Clean those rows up to avoid INTERNAL_ERROR and let login continue through normal email linking flow.
         if (providerOptional.isEmpty()
                 && userProviderRepository.existsByProviderAndProviderId(ProviderType.GOOGLE, googleUserId)) {
             userProviderRepository.deleteByProviderAndProviderId(ProviderType.GOOGLE, googleUserId);
@@ -403,10 +378,7 @@ public class AuthService {
         String googleUserId = payload.getSubject();
         String picture = Optional.ofNullable(payload.get("picture")).map(Object::toString).orElse(null);
 
-        OtpVerification otp = otpVerificationRepository
-                .findTopByEmailAndPurposeAndStatusOrderByCreatedAtDesc(email, OtpPurpose.GOOGLE_LINK, OtpStatus.ACTIVE)
-                .orElseThrow(() -> new ApiException("Invalid or expired OTP"));
-        verifyOtpOrThrow(otp, request.otp());
+        verifyOtpOrThrow(email, OtpPurpose.GOOGLE_LINK, request.otp());
 
         User user = userRepository.findByEmail(email).orElseThrow(() -> new ApiException("User not found"));
         if (user.getPassword() == null || user.getPassword().isBlank()) {
@@ -622,29 +594,32 @@ public class AuthService {
         }
     }
 
-    private void verifyOtpOrThrow(OtpVerification otp, String rawOtp) {
-        if (otp.getExpiresAt().isBefore(LocalDateTime.now())) {
-            otp.setStatus(OtpStatus.EXPIRED);
-            otpVerificationRepository.save(otp);
+    private void verifyOtpOrThrow(String email, OtpPurpose purpose, String rawOtp) {
+        String normalizedEmail = normalizeEmail(email);
+        String purposeKey = purpose.name();
+
+        Optional<String> maybeHash = otpRedisService.getOtpHash(normalizedEmail, purposeKey);
+        if (maybeHash.isEmpty()) {
             throw new ApiException("Invalid or expired OTP");
         }
-        if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
-            otp.setStatus(OtpStatus.EXPIRED);
-            otpVerificationRepository.save(otp);
+
+        long attempts = otpRedisService.incrementAttempts(
+                normalizedEmail,
+                purposeKey,
+                java.time.Duration.ofMinutes(OTP_EXPIRY_MINUTES)
+        );
+        if (attempts > OTP_MAX_ATTEMPTS) {
+            otpRedisService.clearOtp(normalizedEmail, purposeKey);
             throw new ApiException("Too many attempts");
         }
 
-        String hash = hashOtp(rawOtp);
-        if (!hash.equals(otp.getOtpHash())) {
-            otp.setAttemptCount(otp.getAttemptCount() + 1);
-            if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
-                otp.setStatus(OtpStatus.EXPIRED);
-            }
-            otpVerificationRepository.save(otp);
+        String expectedHash = maybeHash.get();
+        String actualHash = hashOtp(rawOtp);
+        if (!actualHash.equals(expectedHash)) {
             throw new ApiException("Invalid or expired OTP");
         }
-        otp.setStatus(OtpStatus.VERIFIED);
-        otpVerificationRepository.save(otp);
+
+        otpRedisService.clearOtp(normalizedEmail, purposeKey);
     }
 
     private boolean isEmailVerified(Object emailVerifiedClaim) {
