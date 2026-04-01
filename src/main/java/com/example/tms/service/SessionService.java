@@ -1,6 +1,7 @@
 package com.example.tms.service;
 
 import com.example.tms.api.dto.session.CreateSessionRequest;
+import com.example.tms.api.dto.session.SessionListItemResponse;
 import com.example.tms.api.dto.session.TutorSessionClassOptionResponse;
 import com.example.tms.api.dto.session.TutorSessionStudentOptionResponse;
 import com.example.tms.api.dto.session.UpdateSessionFinancialRequest;
@@ -25,6 +26,8 @@ import com.example.tms.repository.UserRoleRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 import java.time.YearMonth;
 import java.math.BigDecimal;
@@ -235,8 +238,10 @@ public class SessionService {
         return saved;
     }
 
-    public List<Session> getByPayrollMonth(String payrollMonth) {
-        return sessionRepository.findByPayrollMonth(payrollMonth);
+    @PreAuthorize("hasRole('TUTOR')")
+    public Slice<SessionListItemResponse> getByPayrollMonth(User tutor, String payrollMonth, Pageable pageable) {
+        return sessionRepository.findByTutorClassTutorIdAndPayrollMonth(tutor.getId(), payrollMonth, pageable)
+                .map(this::toListItemResponse);
     }
 
     @PreAuthorize("hasRole('TUTOR')")
@@ -271,6 +276,19 @@ public class SessionService {
                 tutorClass.getPricePerHour(),
                 tutorClass.getDefaultSalaryRate(),
                 students
+        );
+    }
+
+    private SessionListItemResponse toListItemResponse(Session session) {
+        return new SessionListItemResponse(
+                session.getId(),
+                session.getTutorClass().getId(),
+                session.getDate(),
+                session.getDurationHours(),
+                session.getTuitionAtLog(),
+                session.getSalaryRateAtLog(),
+                session.getPayrollMonth(),
+                session.getNote()
         );
     }
 

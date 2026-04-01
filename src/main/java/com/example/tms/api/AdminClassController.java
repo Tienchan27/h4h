@@ -7,9 +7,14 @@ import com.example.tms.api.dto.classes.StudentLookupResponse;
 import com.example.tms.api.dto.classes.SubjectOptionResponse;
 import com.example.tms.api.dto.classes.TutorClassApplicationResponse;
 import com.example.tms.api.dto.classes.UpdateClassDisplayNameRequest;
+import com.example.tms.api.dto.common.SliceResponse;
+import com.example.tms.api.util.PageableGuard;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.ClassAssignmentService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/admin/classes")
@@ -49,13 +55,39 @@ public class AdminClassController {
     }
 
     @GetMapping("/published")
-    public List<PublishedClassResponse> published() {
-        return classAssignmentService.listPublishedClasses(currentUserResolver.requireUser());
+    public SliceResponse<PublishedClassResponse> published(Pageable pageable) {
+        Pageable guarded = PageableGuard.guard(
+                pageable,
+                50,
+                Sort.by(Sort.Direction.DESC, "createdAt"),
+                Set.of("createdAt", "pricePerHour")
+        );
+        Slice<PublishedClassResponse> slice = classAssignmentService.listPublishedClasses(currentUserResolver.requireUser(), guarded);
+        return new SliceResponse<>(
+                slice.getContent(),
+                slice.hasNext(),
+                guarded.getPageNumber(),
+                guarded.getPageSize(),
+                PageableGuard.sortToString(guarded.getSort())
+        );
     }
 
     @GetMapping("/{classId}/applications")
-    public List<TutorClassApplicationResponse> applications(@PathVariable UUID classId) {
-        return classAssignmentService.listClassApplications(currentUserResolver.requireUser(), classId);
+    public SliceResponse<TutorClassApplicationResponse> applications(@PathVariable UUID classId, Pageable pageable) {
+        Pageable guarded = PageableGuard.guard(
+                pageable,
+                50,
+                Sort.by(Sort.Direction.ASC, "appliedAt"),
+                Set.of("appliedAt")
+        );
+        Slice<TutorClassApplicationResponse> slice = classAssignmentService.listClassApplications(currentUserResolver.requireUser(), classId, guarded);
+        return new SliceResponse<>(
+                slice.getContent(),
+                slice.hasNext(),
+                guarded.getPageNumber(),
+                guarded.getPageSize(),
+                PageableGuard.sortToString(guarded.getSort())
+        );
     }
 
     @PostMapping("/applications/{applicationId}/approve")

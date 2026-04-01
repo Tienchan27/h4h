@@ -8,6 +8,7 @@ import {
   SubjectOptionResponse,
   TutorClassApplicationResponse,
 } from '../types/classAssignment';
+import { SliceResponse } from '../types/pagination';
 
 export async function listSubjects(): Promise<SubjectOptionResponse[]> {
   const response = await api.get<SubjectOptionResponse[]>('/admin/classes/subjects');
@@ -26,13 +27,17 @@ export async function lookupStudentByEmail(email: string): Promise<StudentLookup
   return response.data;
 }
 
-export async function listPublishedClasses(): Promise<PublishedClassResponse[]> {
-  const response = await api.get<PublishedClassResponse[]>('/admin/classes/published');
+export async function listPublishedClasses(): Promise<SliceResponse<PublishedClassResponse>> {
+  const response = await api.get<SliceResponse<PublishedClassResponse>>('/admin/classes/published', {
+    params: { page: 0, size: 20, sort: 'createdAt,desc' },
+  });
   return response.data;
 }
 
-export async function listClassApplications(classId: string): Promise<TutorClassApplicationResponse[]> {
-  const response = await api.get<TutorClassApplicationResponse[]>(`/admin/classes/${classId}/applications`);
+export async function listClassApplications(classId: string): Promise<SliceResponse<TutorClassApplicationResponse>> {
+  const response = await api.get<SliceResponse<TutorClassApplicationResponse>>(`/admin/classes/${classId}/applications`, {
+    params: { page: 0, size: 20, sort: 'appliedAt,asc' },
+  });
   return response.data;
 }
 
@@ -53,8 +58,10 @@ export async function updateClassDisplayName(classId: string, displayName: strin
   return response.data;
 }
 
-export async function listAvailableClasses(): Promise<AvailableClassResponse[]> {
-  const response = await api.get<AvailableClassResponse[]>('/classes/available');
+export async function listAvailableClasses(): Promise<SliceResponse<AvailableClassResponse>> {
+  const response = await api.get<SliceResponse<AvailableClassResponse>>('/classes/available', {
+    params: { page: 0, size: 20, sort: 'createdAt,desc' },
+  });
   return response.data;
 }
 

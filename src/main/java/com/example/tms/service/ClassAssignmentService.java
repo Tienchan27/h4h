@@ -26,6 +26,8 @@ import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.UserRepository;
 import com.example.tms.security.RoleGuard;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -137,20 +139,16 @@ public class ClassAssignmentService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    public List<PublishedClassResponse> listPublishedClasses(User admin) {
-        return tutorClassRepository.findByStatusOrderByCreatedAtDesc(ClassStatus.AVAILABLE)
-                .stream()
-                .map(this::toPublishedClassResponse)
-                .toList();
+    public Slice<PublishedClassResponse> listPublishedClasses(User admin, Pageable pageable) {
+        return tutorClassRepository.findByStatus(ClassStatus.AVAILABLE, pageable)
+                .map(this::toPublishedClassResponse);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    public List<TutorClassApplicationResponse> listClassApplications(User admin, UUID classId) {
+    public Slice<TutorClassApplicationResponse> listClassApplications(User admin, UUID classId, Pageable pageable) {
         tutorClassRepository.findById(classId).orElseThrow(() -> new ApiException("Class not found"));
-        return classApplicationRepository.findByClassIdOrderByAppliedAtAsc(classId)
-                .stream()
-                .map(this::toApplicationResponse)
-                .toList();
+        return classApplicationRepository.findByClassId(classId, pageable)
+                .map(this::toApplicationResponse);
     }
 
     @Transactional
@@ -207,11 +205,9 @@ public class ClassAssignmentService {
     }
 
     @PreAuthorize("hasRole('TUTOR')")
-    public List<AvailableClassResponse> listAvailableClasses(User tutor) {
-        return tutorClassRepository.findByStatusOrderByCreatedAtDesc(ClassStatus.AVAILABLE)
-                .stream()
-                .map(tutorClass -> toAvailableClassResponse(tutorClass, tutor))
-                .toList();
+    public Slice<AvailableClassResponse> listAvailableClasses(User tutor, Pageable pageable) {
+        return tutorClassRepository.findByStatus(ClassStatus.AVAILABLE, pageable)
+                .map(tutorClass -> toAvailableClassResponse(tutorClass, tutor));
     }
 
     @Transactional

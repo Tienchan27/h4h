@@ -1,12 +1,17 @@
 package com.example.tms.api;
 
+import com.example.tms.api.dto.common.SliceResponse;
 import com.example.tms.api.dto.dashboard.AdminTutorDetailResponse;
 import com.example.tms.api.dto.dashboard.TutorDashboardResponse;
 import com.example.tms.api.dto.dashboard.TutorClassOverviewResponse;
 import com.example.tms.api.dto.dashboard.TutorClassRosterResponse;
 import com.example.tms.api.dto.dashboard.TutorSummaryResponse;
+import com.example.tms.api.util.PageableGuard;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.DashboardService;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/dashboard")
@@ -29,8 +35,25 @@ public class DashboardController {
     }
 
     @GetMapping("/admin/tutors/summary")
-    public List<TutorSummaryResponse> adminSummary(@RequestParam String month) {
-        return dashboardService.adminTutorSummary(currentUserResolver.requireUser(), YearMonth.parse(month));
+    public SliceResponse<TutorSummaryResponse> adminSummary(@RequestParam String month, Pageable pageable) {
+        Pageable guarded = PageableGuard.guard(
+                pageable,
+                50,
+                Sort.by(Sort.Direction.ASC, "tutorName"),
+                Set.of("tutorName", "tutorEmail")
+        );
+        Slice<TutorSummaryResponse> slice = dashboardService.adminTutorSummary(
+                currentUserResolver.requireUser(),
+                YearMonth.parse(month),
+                guarded
+        );
+        return new SliceResponse<>(
+                slice.getContent(),
+                slice.hasNext(),
+                guarded.getPageNumber(),
+                guarded.getPageSize(),
+                PageableGuard.sortToString(guarded.getSort())
+        );
     }
 
     @GetMapping("/admin/tutors/detail")

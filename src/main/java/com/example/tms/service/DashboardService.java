@@ -29,6 +29,8 @@ import com.example.tms.repository.TutorPayoutRepository;
 import com.example.tms.repository.UserRepository;
 import com.example.tms.repository.UserRoleRepository;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -69,13 +71,10 @@ public class DashboardService {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @Cacheable(cacheNames = "dashboard:admin:summary", key = "'adminSummary:' + #admin.id + ':' + #month")
-    public List<TutorSummaryResponse> adminTutorSummary(User admin, YearMonth month) {
-        List<UserRole> tutorRoles = userRoleRepository.findByRoleAndStatus(RoleName.TUTOR, UserRoleStatus.ACTIVE);
-        return tutorRoles.stream()
+    public Slice<TutorSummaryResponse> adminTutorSummary(User admin, YearMonth month, Pageable pageable) {
+        return userRoleRepository.findByRoleAndStatus(RoleName.TUTOR, UserRoleStatus.ACTIVE, pageable)
                 .map(UserRole::getUser)
-                .map(tutor -> toSummary(tutor, month))
-                .toList();
+                .map(tutor -> toSummary(tutor, month));
     }
 
     @PreAuthorize("hasRole('ADMIN')")

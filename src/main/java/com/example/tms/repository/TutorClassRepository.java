@@ -4,6 +4,8 @@ import com.example.tms.entity.TutorClass;
 import com.example.tms.entity.enums.ClassStatus;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,9 +23,8 @@ public interface TutorClassRepository extends JpaRepository<TutorClass, UUID> {
            select tc from TutorClass tc
            join fetch tc.subject s
            where tc.status = :status
-           order by tc.createdAt desc
            """)
-    List<TutorClass> findByStatusOrderByCreatedAtDesc(ClassStatus status);
+    Slice<TutorClass> findByStatus(ClassStatus status, Pageable pageable);
 
     @Query("""
            select tc from TutorClass tc

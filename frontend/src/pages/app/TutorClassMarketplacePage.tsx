@@ -15,7 +15,7 @@ function TutorClassMarketplacePage() {
     setError('');
     try {
       const response = await listAvailableClasses();
-      setItems(response);
+      setItems(response.items);
     } catch (err: unknown) {
       setError(extractApiErrorMessage(err, 'Failed to load available classes'));
     } finally {

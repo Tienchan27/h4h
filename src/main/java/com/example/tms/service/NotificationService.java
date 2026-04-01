@@ -1,12 +1,14 @@
 package com.example.tms.service;
 
+import com.example.tms.api.dto.notification.NotificationResponse;
 import com.example.tms.entity.Notification;
 import com.example.tms.entity.User;
 import com.example.tms.entity.enums.NotificationType;
 import com.example.tms.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,13 +29,25 @@ public class NotificationService {
         notificationRepository.save(notification);
     }
 
-    public List<Notification> getMyNotifications(UUID userId) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId);
-    }
-
     public Notification markRead(UUID notificationId) {
         Notification n = notificationRepository.findById(notificationId).orElseThrow();
         n.setRead(true);
         return notificationRepository.save(n);
+    }
+
+    public Slice<NotificationResponse> getMyNotifications(UUID userId, Pageable pageable) {
+        return notificationRepository.findByUserId(userId, pageable)
+                .map(this::toResponse);
+    }
+
+    private NotificationResponse toResponse(Notification n) {
+        return new NotificationResponse(
+                n.getId(),
+                n.getType(),
+                n.getTitle(),
+                n.getContent(),
+                n.isRead(),
+                n.getCreatedAt()
+        );
     }
 }

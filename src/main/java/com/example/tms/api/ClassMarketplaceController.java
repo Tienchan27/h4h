@@ -4,9 +4,14 @@ import com.example.tms.api.dto.classes.ApplyClassResponse;
 import com.example.tms.api.dto.classes.AvailableClassResponse;
 import com.example.tms.api.dto.classes.PublishedClassResponse;
 import com.example.tms.api.dto.classes.UpdateClassDisplayNameRequest;
+import com.example.tms.api.dto.common.SliceResponse;
+import com.example.tms.api.util.PageableGuard;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.ClassAssignmentService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,8 +20,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/classes")
@@ -30,8 +35,21 @@ public class ClassMarketplaceController {
     }
 
     @GetMapping("/available")
-    public List<AvailableClassResponse> available() {
-        return classAssignmentService.listAvailableClasses(currentUserResolver.requireUser());
+    public SliceResponse<AvailableClassResponse> available(Pageable pageable) {
+        Pageable guarded = PageableGuard.guard(
+                pageable,
+                50,
+                Sort.by(Sort.Direction.DESC, "createdAt"),
+                Set.of("createdAt", "pricePerHour")
+        );
+        Slice<AvailableClassResponse> slice = classAssignmentService.listAvailableClasses(currentUserResolver.requireUser(), guarded);
+        return new SliceResponse<>(
+                slice.getContent(),
+                slice.hasNext(),
+                guarded.getPageNumber(),
+                guarded.getPageSize(),
+                PageableGuard.sortToString(guarded.getSort())
+        );
     }
 
     @PostMapping("/{classId}/apply")

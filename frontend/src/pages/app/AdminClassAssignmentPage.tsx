@@ -96,7 +96,7 @@ function AdminClassAssignmentPage() {
     try {
       const [subjectResponse, publishedResponse] = await Promise.all([listSubjects(), listPublishedClasses()]);
       setSubjects(subjectResponse);
-      setPublishedClasses(publishedResponse);
+      setPublishedClasses(publishedResponse.items);
       if (subjectResponse.length > 0) {
         const nextSubjectId = subjectId || subjectResponse[0].id;
         setSubjectId(nextSubjectId);

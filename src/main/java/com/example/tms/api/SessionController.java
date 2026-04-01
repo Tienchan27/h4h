@@ -1,12 +1,18 @@
 package com.example.tms.api;
 
+import com.example.tms.api.dto.common.SliceResponse;
 import com.example.tms.api.dto.session.CreateSessionRequest;
+import com.example.tms.api.dto.session.SessionListItemResponse;
 import com.example.tms.api.dto.session.TutorSessionClassOptionResponse;
 import com.example.tms.api.dto.session.UpdateSessionFinancialRequest;
 import com.example.tms.entity.Session;
+import com.example.tms.api.util.PageableGuard;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.SessionService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/sessions")
@@ -44,8 +51,21 @@ public class SessionController {
     }
 
     @GetMapping
-    public List<Session> byMonth(@RequestParam String payrollMonth) {
-        return sessionService.getByPayrollMonth(payrollMonth);
+    public SliceResponse<SessionListItemResponse> byMonth(@RequestParam String payrollMonth, Pageable pageable) {
+        Pageable guarded = PageableGuard.guard(
+                pageable,
+                50,
+                Sort.by(Sort.Direction.DESC, "date"),
+                Set.of("date", "createdAt")
+        );
+        Slice<SessionListItemResponse> slice = sessionService.getByPayrollMonth(currentUserResolver.requireUser(), payrollMonth, guarded);
+        return new SliceResponse<>(
+                slice.getContent(),
+                slice.hasNext(),
+                guarded.getPageNumber(),
+                guarded.getPageSize(),
+                PageableGuard.sortToString(guarded.getSort())
+        );
     }
 
     @GetMapping("/my-classes")
