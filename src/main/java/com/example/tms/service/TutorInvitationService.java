@@ -22,19 +22,22 @@ public class TutorInvitationService {
     private final UserRoleService userRoleService;
     private final RoleGuard roleGuard;
     private final MailService mailService;
+    private final NotificationService notificationService;
 
     public TutorInvitationService(
             TutorInvitationRepository tutorInvitationRepository,
             UserRepository userRepository,
             UserRoleService userRoleService,
             RoleGuard roleGuard,
-            MailService mailService
+            MailService mailService,
+            NotificationService notificationService
     ) {
         this.tutorInvitationRepository = tutorInvitationRepository;
         this.userRepository = userRepository;
         this.userRoleService = userRoleService;
         this.roleGuard = roleGuard;
         this.mailService = mailService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -95,6 +98,15 @@ public class TutorInvitationService {
         invitation.setInvitedUser(user);
         invitation.setAcceptedAt(LocalDateTime.now());
         tutorInvitationRepository.save(invitation);
+
+        if (invitation.getInvitedBy() != null) {
+            notificationService.notifyUser(
+                    invitation.getInvitedBy(),
+                    com.example.tms.entity.enums.NotificationType.TUTOR_INVITATION_ACCEPTED,
+                    "Tutor invitation accepted",
+                    "User " + user.getEmail() + " accepted tutor invitation."
+            );
+        }
     }
 
     private String normalizeEmail(String email) {

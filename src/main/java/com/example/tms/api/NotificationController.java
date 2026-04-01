@@ -3,7 +3,7 @@ package com.example.tms.api;
 import com.example.tms.api.dto.common.SliceResponse;
 import com.example.tms.api.dto.notification.NotificationResponse;
 import com.example.tms.api.util.PageableGuard;
-import com.example.tms.entity.Notification;
+import com.example.tms.api.dto.notification.NotificationResponse;
 import com.example.tms.security.CurrentUserResolver;
 import com.example.tms.service.NotificationService;
 import org.springframework.data.domain.Pageable;
@@ -48,7 +48,7 @@ public class NotificationController {
     }
 
     @PostMapping("/{id}/read")
-    public Notification markRead(@PathVariable UUID id) {
-        return notificationService.markRead(id);
+    public NotificationResponse markRead(@PathVariable UUID id) {
+        return notificationService.markReadResponse(currentUserResolver.requireUserId(), id);
     }
 }

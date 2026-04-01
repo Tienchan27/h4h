@@ -48,6 +48,7 @@ public class ClassAssignmentService {
     private final UserRoleService userRoleService;
     private final RoleGuard roleGuard;
     private final MailService mailService;
+    private final NotificationService notificationService;
 
     public ClassAssignmentService(
             SubjectRepository subjectRepository,
@@ -57,7 +58,8 @@ public class ClassAssignmentService {
             UserRepository userRepository,
             UserRoleService userRoleService,
             RoleGuard roleGuard,
-            MailService mailService
+            MailService mailService,
+            NotificationService notificationService
     ) {
         this.subjectRepository = subjectRepository;
         this.tutorClassRepository = tutorClassRepository;
@@ -67,6 +69,7 @@ public class ClassAssignmentService {
         this.userRoleService = userRoleService;
         this.roleGuard = roleGuard;
         this.mailService = mailService;
+        this.notificationService = notificationService;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -183,6 +186,26 @@ public class ClassAssignmentService {
             classApplicationRepository.save(application);
         }
 
+        notificationService.notifyUser(
+                approved.getTutor(),
+                com.example.tms.entity.enums.NotificationType.CLASS_APPLICATION_APPROVED,
+                "Class application approved",
+                "You have been assigned to class: " + tutorClass.getDisplayName()
+        );
+
+        for (TutorClassApplication application : allApplications) {
+            if (application.getStatus() == TutorClassApplicationStatus.REJECTED
+                    && application.getTutor() != null
+                    && !application.getTutor().getId().equals(approved.getTutor().getId())) {
+                notificationService.notifyUser(
+                        application.getTutor(),
+                        com.example.tms.entity.enums.NotificationType.CLASS_APPLICATION_REJECTED,
+                        "Class application rejected",
+                        "Your application for class " + tutorClass.getDisplayName() + " was rejected. Reason: " + application.getRejectionReason()
+                );
+            }
+        }
+
         return toPublishedClassResponse(tutorClass);
     }
 
@@ -201,6 +224,13 @@ public class ClassAssignmentService {
         application.setReviewedAt(LocalDateTime.now());
         application.setRejectionReason(reason == null || reason.isBlank() ? "Rejected by admin" : reason.trim());
         application = classApplicationRepository.save(application);
+
+        notificationService.notifyUser(
+                application.getTutor(),
+                com.example.tms.entity.enums.NotificationType.CLASS_APPLICATION_REJECTED,
+                "Class application rejected",
+                "Your application was rejected. Reason: " + application.getRejectionReason()
+        );
         return toApplicationResponse(application);
     }
 

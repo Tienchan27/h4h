@@ -20,6 +20,7 @@ import com.example.tms.repository.UserRepository;
 import com.example.tms.security.RoleGuard;
 import com.example.tms.service.ClassAssignmentService;
 import com.example.tms.service.MailService;
+import com.example.tms.service.NotificationService;
 import com.example.tms.service.UserRoleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,6 +57,8 @@ class ClassAssignmentServiceTests {
     private RoleGuard roleGuard;
     @Mock
     private MailService mailService;
+    @Mock
+    private NotificationService notificationService;
 
     private ClassAssignmentService classAssignmentService;
 
@@ -69,7 +72,8 @@ class ClassAssignmentServiceTests {
                 userRepository,
                 userRoleService,
                 roleGuard,
-                mailService
+                mailService,
+                notificationService
         );
     }
 

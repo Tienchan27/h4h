@@ -1,4 +1,6 @@
 HELP.md
+project_context.md
+/frontend/project_context.md
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/

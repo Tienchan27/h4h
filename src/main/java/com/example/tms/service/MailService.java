@@ -75,4 +75,27 @@ public class MailService {
             throw new ApiException("Failed to deliver invitation email. Please try again later.");
         }
     }
+
+    /**
+     * Best-effort email for operational notifications.
+     * This must never break the primary business operation.
+     */
+    public void sendNotificationEmail(String to, String subject, String content) {
+        if (isTestProfile()) {
+            log.debug("Skip notification email sending in test profile for {}", to);
+            return;
+        }
+        if (to == null || to.isBlank()) {
+            return;
+        }
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setSubject(subject == null ? "Notification" : subject);
+            message.setText(content == null ? "" : content);
+            mailSender.send(message);
+        } catch (Exception ex) {
+            log.warn("Notification email sending failed for {}: {}", to, ex.getMessage());
+        }
+    }
 }

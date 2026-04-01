@@ -31,7 +31,7 @@ import java.util.UUID;
 @Table(
     name = "invoices",
     uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"student_id", "year", "month"})
+        @UniqueConstraint(columnNames = {"student_id", "year_value", "month_value"})
     }
 )
 public class Invoice {
@@ -46,10 +46,10 @@ public class Invoice {
     @JoinColumn(name = "student_id", nullable = false)
     private User student;
 
-    @Column(nullable = false)
+    @Column(name = "year_value", nullable = false)
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(name = "month_value", nullable = false)
     private Integer month;
 
     @Column(name = "total_hours", nullable = false, precision = 10, scale = 2)

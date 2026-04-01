@@ -17,17 +17,23 @@ import java.util.UUID;
 public class AdminTutorRoleService {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
+    private final NotificationService notificationService;
 
-    public AdminTutorRoleService(UserRepository userRepository, UserRoleRepository userRoleRepository) {
+    public AdminTutorRoleService(
+            UserRepository userRepository,
+            UserRoleRepository userRoleRepository,
+            NotificationService notificationService
+    ) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
+        this.notificationService = notificationService;
     }
 
     @Transactional
     @PreAuthorize("hasRole('ADMIN')")
     public void revokeTutorRole(User admin, UUID tutorId, String reason) {
         // Validate tutor exists
-        userRepository.findById(tutorId)
+        User tutor = userRepository.findById(tutorId)
                 .orElseThrow(() -> new ApiException("Tutor not found"));
 
         UserRole userRole = userRoleRepository.findByUserIdAndRole(tutorId, RoleName.TUTOR)
@@ -38,6 +44,13 @@ public class AdminTutorRoleService {
         userRole.setRevokedReason(reason);
         userRole.setUpdatedBy(admin);
         userRoleRepository.save(userRole);
+
+        notificationService.notifyUser(
+                tutor,
+                com.example.tms.entity.enums.NotificationType.TUTOR_ROLE_REVOKED,
+                "Tutor access revoked",
+                "Admin revoked your tutor access. " + (reason == null || reason.isBlank() ? "" : ("Reason: " + reason.trim()))
+        );
     }
 }
 

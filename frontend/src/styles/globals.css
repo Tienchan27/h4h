@@ -653,6 +653,14 @@ a {
   margin-top: 12px;
 }
 
+.notification-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 10px;
+}
+
 .notification-item {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -661,6 +669,27 @@ a {
   justify-content: space-between;
   gap: 12px;
   align-items: flex-start;
+}
+
+.notification-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .notification-item.unread {

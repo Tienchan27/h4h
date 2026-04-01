@@ -27,7 +27,7 @@ import java.util.UUID;
 @Setter
 @Entity
 @Table(name = "tutor_payouts",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"tutor_id", "year", "month"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"tutor_id", "year_value", "month_value"}))
 public class TutorPayout {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -39,10 +39,10 @@ public class TutorPayout {
     @JoinColumn(name = "tutor_id", nullable = false)
     private User tutor;
 
-    @Column(nullable = false)
+    @Column(name = "year_value", nullable = false)
     private Integer year;
 
-    @Column(nullable = false)
+    @Column(name = "month_value", nullable = false)
     private Integer month;
 
     // Money in VND integer.
