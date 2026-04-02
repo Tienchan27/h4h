@@ -34,20 +34,20 @@ public class PayoutService {
     private final TutorPayoutRepository tutorPayoutRepository;
     private final TutorPayoutPaymentRepository payoutPaymentRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
+    private final NotificationOutboxService notificationOutboxService;
 
     public PayoutService(
             SessionRepository sessionRepository,
             TutorPayoutRepository tutorPayoutRepository,
             TutorPayoutPaymentRepository payoutPaymentRepository,
             UserRepository userRepository,
-            NotificationService notificationService
+            NotificationOutboxService notificationOutboxService
     ) {
         this.sessionRepository = sessionRepository;
         this.tutorPayoutRepository = tutorPayoutRepository;
         this.payoutPaymentRepository = payoutPaymentRepository;
         this.userRepository = userRepository;
-        this.notificationService = notificationService;
+        this.notificationOutboxService = notificationOutboxService;
     }
 
     @Transactional
@@ -95,11 +95,12 @@ public class PayoutService {
             payout.setStatus(PayoutStatus.LOCKED);
             generated.add(tutorPayoutRepository.save(payout));
 
-            notificationService.notifyUser(
+            notificationOutboxService.enqueue(
                     tutor,
                     NotificationType.PAYOUT_GENERATED,
                     "Monthly payout generated",
-                    "Payout for " + payrollMonth + " generated with net salary " + payout.getNetSalary()
+                    "Payout for " + payrollMonth + " generated with net salary " + payout.getNetSalary(),
+                    "payout:" + payout.getId()
             );
         }
         return generated;
@@ -118,11 +119,12 @@ public class PayoutService {
         payout.setNetSalary(netSalary);
         TutorPayout saved = tutorPayoutRepository.save(payout);
 
-        notificationService.notifyUser(
+        notificationOutboxService.enqueue(
                 payout.getTutor(),
                 NotificationType.PAYOUT_UPDATED,
                 "Payout net salary updated",
-                "Admin updated net salary for payout " + payout.getId() + "."
+                "Admin updated net salary for payout " + payout.getId() + ".",
+                "payout:" + payout.getId()
         );
 
         return saved;
@@ -160,11 +162,12 @@ public class PayoutService {
             payoutPaymentRepository.save(pp);
         });
 
-        notificationService.notifyUser(
+        notificationOutboxService.enqueue(
                 payout.getTutor(),
                 NotificationType.PAYOUT_PAID,
                 "Payout marked as paid",
-                "Payout " + payout.getId() + " has been marked paid."
+                "Payout " + payout.getId() + " has been marked paid.",
+                "payout:" + payout.getId()
         );
         return saved;
     }

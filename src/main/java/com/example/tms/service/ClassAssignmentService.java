@@ -15,6 +15,7 @@ import com.example.tms.entity.TutorClassApplication;
 import com.example.tms.entity.User;
 import com.example.tms.entity.enums.ClassStatus;
 import com.example.tms.entity.enums.EnrollmentStatus;
+import com.example.tms.entity.enums.NotificationType;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.entity.enums.TutorClassApplicationStatus;
 import com.example.tms.entity.enums.UserStatus;
@@ -48,7 +49,7 @@ public class ClassAssignmentService {
     private final UserRoleService userRoleService;
     private final RoleGuard roleGuard;
     private final MailService mailService;
-    private final NotificationService notificationService;
+    private final NotificationOutboxService notificationOutboxService;
 
     public ClassAssignmentService(
             SubjectRepository subjectRepository,
@@ -59,7 +60,7 @@ public class ClassAssignmentService {
             UserRoleService userRoleService,
             RoleGuard roleGuard,
             MailService mailService,
-            NotificationService notificationService
+            NotificationOutboxService notificationOutboxService
     ) {
         this.subjectRepository = subjectRepository;
         this.tutorClassRepository = tutorClassRepository;
@@ -69,7 +70,7 @@ public class ClassAssignmentService {
         this.userRoleService = userRoleService;
         this.roleGuard = roleGuard;
         this.mailService = mailService;
-        this.notificationService = notificationService;
+        this.notificationOutboxService = notificationOutboxService;
     }
 
     @PreAuthorize("hasRole('ADMIN')")
@@ -186,22 +187,24 @@ public class ClassAssignmentService {
             classApplicationRepository.save(application);
         }
 
-        notificationService.notifyUser(
+        notificationOutboxService.enqueue(
                 approved.getTutor(),
-                com.example.tms.entity.enums.NotificationType.CLASS_APPLICATION_APPROVED,
+                NotificationType.CLASS_APPLICATION_APPROVED,
                 "Class application approved",
-                "You have been assigned to class: " + tutorClass.getDisplayName()
+                "You have been assigned to class: " + tutorClass.getDisplayName(),
+                "class:" + tutorClass.getId()
         );
 
         for (TutorClassApplication application : allApplications) {
             if (application.getStatus() == TutorClassApplicationStatus.REJECTED
                     && application.getTutor() != null
                     && !application.getTutor().getId().equals(approved.getTutor().getId())) {
-                notificationService.notifyUser(
+                notificationOutboxService.enqueue(
                         application.getTutor(),
-                        com.example.tms.entity.enums.NotificationType.CLASS_APPLICATION_REJECTED,
+                        NotificationType.CLASS_APPLICATION_REJECTED,
                         "Class application rejected",
-                        "Your application for class " + tutorClass.getDisplayName() + " was rejected. Reason: " + application.getRejectionReason()
+                        "Your application for class " + tutorClass.getDisplayName() + " was rejected. Reason: " + application.getRejectionReason(),
+                        "class:" + tutorClass.getId()
                 );
             }
         }
@@ -225,11 +228,12 @@ public class ClassAssignmentService {
         application.setRejectionReason(reason == null || reason.isBlank() ? "Rejected by admin" : reason.trim());
         application = classApplicationRepository.save(application);
 
-        notificationService.notifyUser(
+        notificationOutboxService.enqueue(
                 application.getTutor(),
-                com.example.tms.entity.enums.NotificationType.CLASS_APPLICATION_REJECTED,
+                NotificationType.CLASS_APPLICATION_REJECTED,
                 "Class application rejected",
-                "Your application was rejected. Reason: " + application.getRejectionReason()
+                "Your application was rejected. Reason: " + application.getRejectionReason(),
+                "class:" + application.getTutorClass().getId()
         );
         return toApplicationResponse(application);
     }

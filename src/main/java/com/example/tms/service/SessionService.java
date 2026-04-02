@@ -48,7 +48,7 @@ public class SessionService {
     private final SessionStudentTuitionRepository sessionStudentTuitionRepository;
     private final UserRoleRepository userRoleRepository;
     private final SessionFinancialEditAuditRepository auditRepository;
-    private final NotificationService notificationService;
+    private final NotificationOutboxService notificationOutboxService;
 
     public SessionService(
             SessionRepository sessionRepository,
@@ -57,7 +57,7 @@ public class SessionService {
             SessionStudentTuitionRepository sessionStudentTuitionRepository,
             UserRoleRepository userRoleRepository,
             SessionFinancialEditAuditRepository auditRepository,
-            NotificationService notificationService
+            NotificationOutboxService notificationOutboxService
     ) {
         this.sessionRepository = sessionRepository;
         this.tutorClassRepository = tutorClassRepository;
@@ -65,7 +65,7 @@ public class SessionService {
         this.sessionStudentTuitionRepository = sessionStudentTuitionRepository;
         this.userRoleRepository = userRoleRepository;
         this.auditRepository = auditRepository;
-        this.notificationService = notificationService;
+        this.notificationOutboxService = notificationOutboxService;
     }
 
     private List<Long> splitTotalEvenly(long total, int parts) {
@@ -228,11 +228,12 @@ public class SessionService {
 
         List<UserRole> admins = userRoleRepository.findByRoleAndStatus(RoleName.ADMIN, UserRoleStatus.ACTIVE);
         for (UserRole userRole : admins) {
-            notificationService.notifyUser(
+            notificationOutboxService.enqueue(
                     userRole.getUser(),
                     NotificationType.SESSION_FINANCIAL_EDIT,
                     "Session financial updated",
-                    "Tutor " + tutor.getEmail() + " updated session " + saved.getId()
+                    "Tutor " + tutor.getEmail() + " updated session " + saved.getId(),
+                    "session:" + saved.getId()
             );
         }
         return saved;

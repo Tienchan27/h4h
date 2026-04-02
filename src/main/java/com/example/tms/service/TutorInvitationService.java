@@ -3,6 +3,7 @@ package com.example.tms.service;
 import com.example.tms.api.dto.admin.InviteTutorResponse;
 import com.example.tms.entity.TutorInvitation;
 import com.example.tms.entity.User;
+import com.example.tms.entity.enums.NotificationType;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.entity.enums.TutorInvitationStatus;
 import com.example.tms.exception.ApiException;
@@ -22,7 +23,7 @@ public class TutorInvitationService {
     private final UserRoleService userRoleService;
     private final RoleGuard roleGuard;
     private final MailService mailService;
-    private final NotificationService notificationService;
+    private final NotificationOutboxService notificationOutboxService;
 
     public TutorInvitationService(
             TutorInvitationRepository tutorInvitationRepository,
@@ -30,14 +31,14 @@ public class TutorInvitationService {
             UserRoleService userRoleService,
             RoleGuard roleGuard,
             MailService mailService,
-            NotificationService notificationService
+            NotificationOutboxService notificationOutboxService
     ) {
         this.tutorInvitationRepository = tutorInvitationRepository;
         this.userRepository = userRepository;
         this.userRoleService = userRoleService;
         this.roleGuard = roleGuard;
         this.mailService = mailService;
-        this.notificationService = notificationService;
+        this.notificationOutboxService = notificationOutboxService;
     }
 
     @Transactional
@@ -100,11 +101,12 @@ public class TutorInvitationService {
         tutorInvitationRepository.save(invitation);
 
         if (invitation.getInvitedBy() != null) {
-            notificationService.notifyUser(
+            notificationOutboxService.enqueue(
                     invitation.getInvitedBy(),
-                    com.example.tms.entity.enums.NotificationType.TUTOR_INVITATION_ACCEPTED,
+                    NotificationType.TUTOR_INVITATION_ACCEPTED,
                     "Tutor invitation accepted",
-                    "User " + user.getEmail() + " accepted tutor invitation."
+                    "User " + user.getEmail() + " accepted tutor invitation.",
+                    "invitation:" + invitation.getId()
             );
         }
     }

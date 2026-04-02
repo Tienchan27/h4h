@@ -2,6 +2,7 @@ package com.example.tms.service;
 
 import com.example.tms.entity.User;
 import com.example.tms.entity.UserRole;
+import com.example.tms.entity.enums.NotificationType;
 import com.example.tms.entity.enums.RoleName;
 import com.example.tms.entity.enums.UserRoleStatus;
 import com.example.tms.exception.ApiException;
@@ -17,16 +18,16 @@ import java.util.UUID;
 public class AdminTutorRoleService {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
-    private final NotificationService notificationService;
+    private final NotificationOutboxService notificationOutboxService;
 
     public AdminTutorRoleService(
             UserRepository userRepository,
             UserRoleRepository userRoleRepository,
-            NotificationService notificationService
+            NotificationOutboxService notificationOutboxService
     ) {
         this.userRepository = userRepository;
         this.userRoleRepository = userRoleRepository;
-        this.notificationService = notificationService;
+        this.notificationOutboxService = notificationOutboxService;
     }
 
     @Transactional
@@ -45,11 +46,12 @@ public class AdminTutorRoleService {
         userRole.setUpdatedBy(admin);
         userRoleRepository.save(userRole);
 
-        notificationService.notifyUser(
+        notificationOutboxService.enqueue(
                 tutor,
-                com.example.tms.entity.enums.NotificationType.TUTOR_ROLE_REVOKED,
+                NotificationType.TUTOR_ROLE_REVOKED,
                 "Tutor access revoked",
-                "Admin revoked your tutor access. " + (reason == null || reason.isBlank() ? "" : ("Reason: " + reason.trim()))
+                "Admin revoked your tutor access. " + (reason == null || reason.isBlank() ? "" : ("Reason: " + reason.trim())),
+                "user:" + tutorId
         );
     }
 }

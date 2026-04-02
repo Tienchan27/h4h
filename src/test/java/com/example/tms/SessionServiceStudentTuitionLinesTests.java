@@ -15,7 +15,7 @@ import com.example.tms.repository.SessionRepository;
 import com.example.tms.repository.SessionStudentTuitionRepository;
 import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.UserRoleRepository;
-import com.example.tms.service.NotificationService;
+import com.example.tms.service.NotificationOutboxService;
 import com.example.tms.service.SessionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,7 +56,7 @@ class SessionServiceStudentTuitionLinesTests {
     private SessionFinancialEditAuditRepository auditRepository;
 
     @Mock
-    private NotificationService notificationService;
+    private NotificationOutboxService notificationOutboxService;
 
     @Test
     void createCreatesLineItemsAndKeepsTuitionSumConsistent() {
@@ -101,7 +101,7 @@ class SessionServiceStudentTuitionLinesTests {
                 sessionStudentTuitionRepository,
                 userRoleRepository,
                 auditRepository,
-                notificationService
+                notificationOutboxService
         );
 
         // Provide per-student tuition

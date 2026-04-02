@@ -9,7 +9,7 @@ import com.example.tms.repository.TutorInvitationRepository;
 import com.example.tms.repository.UserRepository;
 import com.example.tms.security.RoleGuard;
 import com.example.tms.service.MailService;
-import com.example.tms.service.NotificationService;
+import com.example.tms.service.NotificationOutboxService;
 import com.example.tms.service.TutorInvitationService;
 import com.example.tms.service.UserRoleService;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,7 +44,7 @@ class TutorInvitationServiceTests {
     @Mock
     private MailService mailService;
     @Mock
-    private NotificationService notificationService;
+    private NotificationOutboxService notificationOutboxService;
 
     private TutorInvitationService tutorInvitationService;
 
@@ -56,7 +56,7 @@ class TutorInvitationServiceTests {
                 userRoleService,
                 roleGuard,
                 mailService,
-                notificationService
+                notificationOutboxService
         );
     }
 

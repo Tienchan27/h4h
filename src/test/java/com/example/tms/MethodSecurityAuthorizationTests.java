@@ -14,7 +14,7 @@ import com.example.tms.repository.SessionRepository;
 import com.example.tms.repository.SessionStudentTuitionRepository;
 import com.example.tms.repository.TutorClassRepository;
 import com.example.tms.repository.UserRoleRepository;
-import com.example.tms.service.NotificationService;
+import com.example.tms.service.NotificationOutboxService;
 import com.example.tms.service.SessionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -70,8 +70,8 @@ class MethodSecurityAuthorizationTests {
         }
 
         @Bean
-        NotificationService notificationService() {
-            return mock(NotificationService.class);
+        NotificationOutboxService notificationOutboxService() {
+            return mock(NotificationOutboxService.class);
         }
 
         @Bean
@@ -87,7 +87,7 @@ class MethodSecurityAuthorizationTests {
                 SessionStudentTuitionRepository sessionStudentTuitionRepository,
                 UserRoleRepository userRoleRepository,
                 SessionFinancialEditAuditRepository auditRepository,
-                NotificationService notificationService
+                NotificationOutboxService notificationOutboxService
         ) {
             return new SessionService(
                     sessionRepository,
@@ -96,7 +96,7 @@ class MethodSecurityAuthorizationTests {
                     sessionStudentTuitionRepository,
                     userRoleRepository,
                     auditRepository,
-                    notificationService
+                    notificationOutboxService
             );
         }
     }

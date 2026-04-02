@@ -16,15 +16,21 @@ public class RequestIdFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String requestId = request.getHeader("X-Request-Id");
-        if (requestId == null || requestId.isBlank()) {
-            requestId = UUID.randomUUID().toString();
+        String correlationId = request.getHeader("X-Correlation-Id");
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = request.getHeader("X-Request-Id");
         }
-        MDC.put("requestId", requestId);
-        response.setHeader("X-Request-Id", requestId);
+        if (correlationId == null || correlationId.isBlank()) {
+            correlationId = UUID.randomUUID().toString();
+        }
+        MDC.put("correlationId", correlationId);
+        MDC.put("requestId", correlationId);
+        response.setHeader("X-Correlation-Id", correlationId);
+        response.setHeader("X-Request-Id", correlationId);
         try {
             filterChain.doFilter(request, response);
         } finally {
+            MDC.remove("correlationId");
             MDC.remove("requestId");
         }
     }
